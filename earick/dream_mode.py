@@ -56,7 +56,19 @@ def user_idle_seconds() -> float:
     return time.time() - _LAST_USER_ACTIVITY
 
 
+
 def is_auto() -> bool:
+    """
+    Auto flag priority:
+      1. Environment variable DREAM_AUTO (survives restarts)
+      2. File data/dream_auto.json (ephemeral on Render)
+      3. Default False
+    """
+    env = (os.getenv("DREAM_AUTO") or "").strip().lower()
+    if env in ("true", "1", "yes", "on"):
+        return True
+    if env in ("false", "0", "no", "off"):
+        return False
     if AUTO_FILE.exists():
         try:
             return bool(json.loads(AUTO_FILE.read_text()).get("auto", False))
@@ -65,10 +77,14 @@ def is_auto() -> bool:
     return False
 
 
+
 def set_auto(value: bool) -> None:
+    """Set auto flag. Writes file, but env var takes priority."""
     AUTO_FILE.parent.mkdir(parents=True, exist_ok=True)
     AUTO_FILE.write_text(json.dumps({"auto": bool(value)}))
     print(f"[dream] auto = {value}")
+
+
 
 
 def _load_state() -> dict:
