@@ -126,5 +126,47 @@
     "year": 0,
     "level": "undergrad",
     "subjects": []
+  },
+  "0123737354fluidmechanics": {
+    "book_id": "0123737354fluidmechanics",
+    "title": "0123737354fluidmechanics",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "undergrad",
+    "subjects": [
+      "mechanics"
+    ]
+  },
+  "goldsteinpoolesafkoclassicalmechanics": {
+    "book_id": "goldsteinpoolesafkoclassicalmechanics",
+    "title": "Goldsteinpoolesafkoclassicalmechanics",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "undergrad",
+    "subjects": [
+      "mechanics"
+    ]
+  },
+  "arnold_math_methods89": {
+    "book_id": "arnold_math_methods89",
+    "title": "Arnold Math Methods89",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "undergrad",
+    "subjects": [
+      "mathematical"
+    ]
+  },
+  "d05a1e3f8ecfe2315de4d8958f9c4a904346d472": {
+    "book_id": "d05a1e3f8ecfe2315de4d8958f9c4a904346d472",
+    "title": "D05a1e3f8ecfe2315de4d8958f9c4a904346d472",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "undergrad",
+    "subjects": []
   }
 }
