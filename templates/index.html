@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Earick · Physics Assistant</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+<style>
+  :root {
+    --bg:           #000000;
+    --surface:      #0d0d0d;
+    --surface-2:    #161616;
+    --surface-3:    #1f1f1f;
+    --border:       #262626;
+    --border-hover: #3a3a3a;
+    --text:         #ededed;
+    --text-dim:     #8a8a8a;
+    --text-faint:   #5c5c5c;
+    --accent:       #ededed;
+    --user-bg:      #1a1a1a;
+    --bot-bg:       #0d0d0d;
+    --radius:       12px;
+    --radius-lg:    20px;
+    --font:         -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+    --mono:         ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    display: flex; flex-direction: column; min-height: 100vh;
+    font-size: 15px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 20;
+  }
+  .logo {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+  }
+  header h1 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+  header p { font-size: 0.72rem; color: var(--text-faint); margin-top: 1px; }
+
+  /* ---------- Chat area ---------- */
+  main {
+    flex: 1; max-width: 780px; width: 100%;
+    margin: 0 auto; padding: 24px 16px 140px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .msg {
+    max-width: 88%;
+    padding: 14px 18px;
+    border-radius: var(--radius-lg);
+    line-height: 1.65;
+    font-size: 0.94rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    animation: fade 0.3s ease;
+  }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .msg.user {
+    align-self: flex-end;
+    background: var(--user-bg);
+    border: 1px solid var(--border);
+    border-bottom-right-radius: 6px;
+    color: var(--text);
+    max-width: 78%;
+  }
+  .msg.bot {
+    align-self: flex-start;
+    background: var(--bot-bg);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 6px;
+    max-width: 92%;
+  }
+
+  /* ---------- Content inside messages ---------- */
+  .msg.bot strong { color: #ffffff; font-weight: 600; }
+  .msg.bot em { color: var(--text-dim); font-style: italic; }
+  .msg.bot code {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 0.85em;
+    color: #d0d0d0;
+  }
+  .msg.bot pre {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.82em;
+    margin: 10px 0;
+    color: #cfcfcf;
+  }
+  .msg.bot pre code { background: none; border: none; padding: 0; }
+  .msg.bot h1, .msg.bot h2, .msg.bot h3 {
+    color: #ffffff;
+    font-size: 0.98rem;
+    font-weight: 600;
+    margin: 12px 0 6px;
+  }
+  .msg.bot ul, .msg.bot ol { margin: 6px 0 6px 20px; }
+  .msg.bot li { margin: 3px 0; }
+
+  /* ---------- KaTeX ---------- */
+  .katex-display { margin: 12px 0 !important; overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+  .katex { font-size: 1.02em !important; }
+
+  /* ---------- Sources ---------- */
+  .sources {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+  }
+  .sources::before {
+    content: 'Sources';
+    color: var(--text-faint);
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 4px;
+  }
+  .sources span {
+    display: inline-block;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 3px 9px;
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ---------- Typing indicator ---------- */
+  .typing {
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 0.88rem;
+  }
+  .typing::after {
+    content: '';
+    display: inline-block;
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%, 20%   { content: ''; }
+    40%       { content: '.'; }
+    60%       { content: '..'; }
+    80%, 100% { content: '...'; }
+  }
+
+  /* ---------- Suggestions (welcome) ---------- */
+  .suggestions {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px;
+  }
+  .chip {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    padding: 7px 13px;
+    border-radius: 18px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+  }
+  .chip:hover {
+    color: var(--text);
+    border-color: var(--border-hover);
+    background: var(--surface-3);
+  }
+  .chip:active { transform: scale(0.97); }
+
+  /* ---------- Input bar ---------- */
+  form {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 14px 16px 20px;
+    background: linear-gradient(to top, var(--bg) 55%, transparent);
+    display: flex; justify-content: center;
+    z-index: 15;
+  }
+  .input-wrap {
+    max-width: 780px; width: 100%;
+    display: flex; gap: 8px;
+    align-items: flex-end;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 6px 6px 6px 18px;
+    transition: border-color 0.2s ease;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  .input-wrap:focus-within { border-color: var(--border-hover); }
+  input[type="text"] {
+    flex: 1;
+    background: transparent; border: none; outline: none;
+    color: var(--text);
+    font-size: 0.95rem;
+    padding: 11px 0;
+    font-family: inherit;
+  }
+  input::placeholder { color: var(--text-faint); }
+  button#send {
+    background: var(--text);
+    color: #000;
+    border: none;
+    border-radius: 16px;
+    width: 34px; height: 34px;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+    font-family: inherit;
+    flex-shrink: 0;
+  }
+  button#send:hover:not(:disabled) { opacity: 0.85; }
+  button#send:active:not(:disabled) { transform: scale(0.94); }
+  button#send:disabled { opacity: 0.35; cursor: not-allowed; }
+  button#send svg { width: 16px; height: 16px; }
+
+  /* ---------- Scrollbar (subtle) ---------- */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚛️</div>
+  <div>
+    <h1>Earick</h1>
+    <p>Physics RAG · Young &amp; Freedman</p>
+  </div>
+</header>
+
+<main id="chat">
+  <div class="msg bot">
+    👋 I'm <strong>Earick</strong>, a physics tutor grounded in <em>University Physics</em>.<br><br>
+    Ask me about mechanics, thermodynamics, E&amp;M, waves, optics, relativity, quantum, or nuclear physics.
+    <div class="suggestions">
+      <button class="chip" onclick="ask(this)">What is Newton's second law?</button>
+      <button class="chip" onclick="ask(this)">Explain time dilation</button>
+      <button class="chip" onclick="ask(this)">State the Schrödinger equation</button>
+      <button class="chip" onclick="ask(this)">What is entropy?</button>
+      <button class="chip" onclick="ask(this)">Explain the ideal gas law</button>
+      <button class="chip" onclick="ask(this)">What is electric potential?</button>
+    </div>
+  </div>
+</main>
+
+<form id="form" autocomplete="off">
+  <div class="input-wrap">
+    <input id="input" type="text" placeholder="Ask a physics question…" required />
+    <button id="send" type="submit" aria-label="Send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="19" x2="12" y2="5"></line>
+        <polyline points="5 12 12 5 19 12"></polyline>
+      </svg>
+    </button>
+  </div>
+</form>
+
+<script>
+  const form    = document.getElementById('form');
+  const input   = document.getElementById('input');
+  const sendBtn = document.getElementById('send');
+  const chat    = document.getElementById('chat');
+
+  function scrollBottom() {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  // Lightweight markdown: bold, italic, inline code, line breaks
+  function renderMarkdown(text) {
+    let h = escapeHtml(text);
+    h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    h = h.replace(/(^|\s)\*(?!\s)(.+?)(?<!\s)\*(?=\s|$|\.|,)/g, '$1<em>$2</em>');
+    h = h.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    return h;
+  }
+
+  // Render math in an element via KaTeX auto-render
+  function renderMath(el) {
+    if (typeof renderMathInElement !== 'function') return;
+    try {
+      renderMathInElement(el, {
+        delimiters: [
+          { left: '$$',  right: '$$',  display: true  },
+          { left: '\\[', right: '\\]', display: true  },
+          { left: '\\(', right: '\\)', display: false },
+          { left: '$',   right: '$',   display: false }
+        ],
+        throwOnError: false,
+        ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      });
+    } catch (e) {
+      console.warn('KaTeX render failed:', e);
+    }
+  }
+
+  // Merge adjacent page ranges and build source chips
+  function formatSources(sources) {
+    const parsed = sources
+      .map(s => {
+        const m = String(s.pages || '').match(/(\d+)-(\d+)/);
+        return m ? { a: +m[1], b: +m[2], topic: s.topic || '' } : null;
+      })
+      .filter(Boolean)
+      .sort((x, y) => x.a - y.a);
+
+    const merged = [];
+    for (const r of parsed) {
+      const last = merged[merged.length - 1];
+      if (last && r.a <= last.b + 1) {
+        last.b = Math.max(last.b, r.b);
+        if (!last.topic && r.topic) last.topic = r.topic;
+      } else {
+        merged.push({ a: r.a, b: r.b, topic: r.topic });
+      }
+    }
+
+    return merged.map(({ a, b, topic }) => {
+      const pageStr = (a === b) ? `p.${a}` : `pp.${a}–${b}`;
+      const label = topic ? `${topic.slice(0, 42)} · ${pageStr}` : pageStr;
+      return `<span title="${escapeHtml(topic)} · ${pageStr}">${escapeHtml(label)}</span>`;
+    }).join('');
+  }
+
+  function addMessage(text, who, sources) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + who;
+    div.innerHTML = renderMarkdown(text);
+
+    if (sources && sources.length) {
+      const s = document.createElement('div');
+      s.className = 'sources';
+      s.innerHTML = formatSources(sources);
+      div.appendChild(s);
+    }
+
+    chat.appendChild(div);
+    renderMath(div);
+    scrollBottom();
+  }
+
+  function ask(el) {
+    input.value = el.textContent.trim();
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const message = input.value.trim();
+    if (!message) return;
+
+    addMessage(message, 'user');
+    input.value = '';
+    sendBtn.disabled = true;
+
+    const thinking = document.createElement('div');
+    thinking.className = 'msg bot typing';
+    thinking.textContent = 'Thinking';
+    chat.appendChild(thinking);
+    scrollBottom();
+
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
+      const data = await res.json();
+      thinking.remove();
+      addMessage(data.reply || '(no reply)', 'bot', data.sources);
+    } catch (err) {
+      thinking.remove();
+      addMessage('⚠️ Error: ' + err.message, 'bot');
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  });
+
+  input.focus();
+</script>
+</body>
+</html>
