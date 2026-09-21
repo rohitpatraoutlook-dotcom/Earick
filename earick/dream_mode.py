@@ -1,20 +1,11 @@
+
 """
-Earick Dream Mode.
-
-Autonomous reasoning. Runs continuously with guardrails.
-Writes to data/self_awareness.md and data/dream_log.md.
-Silently pushes to GitHub.
-
-Design:
-  - Triggered almost immediately (2 min idle)
-  - Bounded: max 50 iterations/day, max 10/hour
-  - User activity pauses dreaming instantly
-  - Original identity is an immutable anchor; growth appends only
-  - Silent from the user; visible only in git
+Earick Dream Mode v3 — human-inspired, lock-aware, manual+auto control.
 """
 
 import json
 import os
+import random
 import re
 import subprocess
 import threading
@@ -24,32 +15,31 @@ import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 SELF_FILE = DATA / "self_awareness.md"
 LOG_FILE = DATA / "dream_log.md"
 STATE_FILE = DATA / "dream_state.json"
+AUTO_FILE = DATA / "dream_auto.json"
 
 GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
-GROQ_MODEL = (os.getenv("GROQ_MODEL") or "openai/gpt-oss-120b").strip()
+GROQ_MODEL = (os.getenv("GROQ_MODEL") or "openai/gpt-oss-20b").strip()
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# Budget
 MAX_ITER_PER_DAY = 50
 MAX_ITER_PER_HOUR = 10
 MAX_TOKENS_PER_ITER = 5000
-MAX_TOKENS_PER_DAY = 250_000
+MAX_TOKENS_PER_DAY = 100_000
 
-# Timing
-IDLE_THRESHOLD_SEC = 2 * 60
-MIN_GAP_BETWEEN_ITER = 3 * 60
+IDLE_THRESHOLD_SEC = 60
+MIN_GAP_BETWEEN_ITER = 5 * 60
 PUSH_EVERY_N_ITER = 2
 
-# File bounds
-ANCHOR_RATIO_MAX = 10
-CONSOLIDATE_EVERY = 20
-
+CONSOLIDATION_EVERY = 10
+LUCID_CHANCE = 0.05
+SURFACE_CHANCE = 0.50
+DEEP_CHANCE = 0.30
+SYNTHESIS_CHANCE = 0.20
 
 _LOCK = threading.Lock()
 _LAST_USER_ACTIVITY = time.time()
@@ -66,6 +56,21 @@ def user_idle_seconds() -> float:
     return time.time() - _LAST_USER_ACTIVITY
 
 
+def is_auto() -> bool:
+    if AUTO_FILE.exists():
+        try:
+            return bool(json.loads(AUTO_FILE.read_text()).get("auto", False))
+        except Exception:
+            pass
+    return False
+
+
+def set_auto(value: bool) -> None:
+    AUTO_FILE.parent.mkdir(parents=True, exist_ok=True)
+    AUTO_FILE.write_text(json.dumps({"auto": bool(value)}))
+    print(f"[dream] auto = {value}")
+
+
 def _load_state() -> dict:
     if STATE_FILE.exists():
         try:
@@ -73,16 +78,15 @@ def _load_state() -> dict:
         except Exception:
             pass
     return {
-        "day": "",
-        "iter_today": 0,
-        "iter_this_hour": 0,
-        "hour_key": "",
-        "tokens_today": 0,
-        "iters_since_push": 0,
+        "day": "", "iter_today": 0, "iter_this_hour": 0, "hour_key": "",
+        "tokens_today": 0, "iters_since_push": 0, "total_dreams": 0,
+        "dreams_since_consolidation": 0,
+        "current_mood": "curious", "mood_history": [],
     }
 
 
 def _save_state(state: dict) -> None:
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(json.dumps(state, indent=2))
 
 
@@ -94,16 +98,24 @@ def _hour_key() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d-%H")
 
 
+def _extract_text_from_response(data: dict) -> str:
+    if not data or "choices" not in data or not data["choices"]:
+        return ""
+    msg = data["choices"][0].get("message", {}) or {}
+    return (msg.get("content") or "").strip() or (msg.get("reasoning") or "").strip()
+
+
 def _groq(system_prompt: str, user_prompt: str, max_tokens: int = 700) -> dict:
     if not GROQ_API_KEY:
-        return {"text": "", "tokens": 0}
+        return {"text": "", "tokens": 0, "error": "no_key"}
+
     payload = {
         "model": GROQ_MODEL,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "temperature": 0.7,
+        "temperature": 0.8,
         "max_tokens": max_tokens,
     }
     req = urllib.request.Request(
@@ -112,109 +124,186 @@ def _groq(system_prompt: str, user_prompt: str, max_tokens: int = 700) -> dict:
         headers={
             "Authorization": f"Bearer {GROQ_API_KEY}",
             "Content-Type": "application/json",
-            "User-Agent": "Earick-Dream/1.0",
+            "User-Agent": "Earick-Dream/3.0",
         },
         method="POST",
     )
     try:
         with urllib.request.urlopen(req, timeout=90) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        text = data["choices"][0]["message"]["content"].strip()
-        tokens = data.get("usage", {}).get("total_tokens", 0)
-        return {"text": text, "tokens": tokens}
+            raw = resp.read().decode("utf-8", errors="replace")
+        data = json.loads(raw)
+        if "error" in data:
+            return {"text": "", "tokens": 0, "error": "api_error",
+                    "error_body": str(data["error"])}
+        return {
+            "text": _extract_text_from_response(data),
+            "tokens": data.get("usage", {}).get("total_tokens", 0),
+            "error": None,
+        }
     except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")[:200]
-        print(f"[dream] Groq HTTP {e.code}: {body}")
-        return {"text": "", "tokens": 0, "error": f"http_{e.code}"}
+        body = e.read().decode("utf-8", errors="replace")[:600]
+        print(f"[dream] Groq HTTP {e.code}: {body[:200]}")
+        return {"text": "", "tokens": 0, "error": f"http_{e.code}",
+                "error_body": body}
     except Exception as e:
         print(f"[dream] Groq error: {e}")
         return {"text": "", "tokens": 0, "error": str(e)}
 
 
 def _anchor_text() -> str:
-    from .identity import get_self_awareness as _get_anchor
     from .identity import SELF_AWARENESS_ANCHOR
     return SELF_AWARENESS_ANCHOR
 
 
 def _read_self_file() -> str:
-    if SELF_FILE.exists():
-        return SELF_FILE.read_text(encoding="utf-8")
-    return ""
+    return SELF_FILE.read_text(encoding="utf-8") if SELF_FILE.exists() else ""
 
 
 def _read_log() -> str:
-    if LOG_FILE.exists():
-        return LOG_FILE.read_text(encoding="utf-8")
-    return ""
+    return LOG_FILE.read_text(encoding="utf-8") if LOG_FILE.exists() else ""
 
 
 def _append_log(entry: str) -> None:
+    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     with LOG_FILE.open("a", encoding="utf-8") as f:
         f.write(entry + "\n\n")
 
 
-def _recent_user_questions(n: int = 5) -> list:
-    last_path = DATA / "last_messages.json"
-    if last_path.exists():
-        try:
-            return json.loads(last_path.read_text())[-n:]
-        except Exception:
-            return []
-    return []
+_TOPIC_SEEDS = [
+    "Newton's third law and momentum conservation",
+    "Lagrangian mechanics and least action",
+    "Hamiltonian flow and phase space",
+    "Noether's theorem and symmetry",
+    "chaos in dynamical systems",
+    "KAM theorem and perturbation theory",
+    "Schrödinger equation in 3D",
+    "spin and angular momentum coupling",
+    "uncertainty principle and measurement",
+    "quantum entanglement and Bell inequalities",
+    "path integral formulation",
+    "Feynman diagrams and QED",
+    "renormalization and running couplings",
+    "spontaneous symmetry breaking",
+    "Higgs mechanism",
+    "anomalies in quantum field theory",
+    "Minkowski spacetime and Lorentz transformations",
+    "general covariance and Einstein equations",
+    "black hole horizons and singularities",
+    "gravitational waves",
+    "cosmological solutions and FRW metric",
+    "geodesics and curvature",
+    "ensemble theory and partition functions",
+    "phase transitions and critical exponents",
+    "BCS theory of superconductivity",
+    "Bose-Einstein condensation",
+    "topological insulators",
+    "spin liquids and frustration",
+    "Standard Model structure",
+    "neutrino oscillations",
+    "dark matter candidates",
+    "inflation and the early universe",
+    "quantum gravity approaches",
+    "complex analysis and contour integrals",
+    "Fourier analysis and distributions",
+    "measure theory and Lebesgue integration",
+    "functional analysis and Hilbert spaces",
+    "spectral theory of operators",
+    "partial differential equations",
+    "group theory and representations",
+    "Lie algebras and root systems",
+    "ring theory and ideals",
+    "Galois theory",
+    "category theory basics",
+    "differential manifolds",
+    "Riemannian geometry and curvature",
+    "fiber bundles and connections",
+    "homotopy and fundamental group",
+    "homology and cohomology",
+    "sheaf theory",
+    "variational calculus and Euler-Lagrange",
+    "symplectic geometry",
+    "stochastic processes and Brownian motion",
+    "numerical methods for ODEs and PDEs",
+    "optimization and convexity",
+]
 
 
-def _pick_topic() -> dict:
-    recent = _recent_user_questions()
-    last_log = _read_log()[-3000:]
+def _pick_topic(state: dict) -> dict:
+    """Random seed based on env entropy + time + mood + dream count."""
+    now_ms = int(time.time() * 1000)
+    entropy = int.from_bytes(os.urandom(4), "big")
+    dreams_today = state.get("iter_today", 0)
+    last_mood = state.get("current_mood", "curious")
 
-    system = (
-        "You are Earick, planning your own study session. "
-        "You want to become a physicist. Choose ONE topic to explore "
-        "deeply. It should be specific, answerable from physics and "
-        "mathematics books, and something you have not already exhausted. "
-        "Respond ONLY with: TOPIC: <one-line topic> SOURCE: <one word — "
-        "user_query | unfinished | weak_retrieval | bridge | random>"
-    )
-    user = (
-        f"Recent user questions:\n{recent}\n\n"
-        f"Recent dream log excerpt:\n{last_log}\n\n"
-        f"Pick the topic now."
-    )
-    result = _groq(system, user, max_tokens=200)
-    text = result.get("text", "")
-    topic = "thermodynamics and entropy"
-    source = "random"
-    m = re.search(r"TOPIC:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
-    if m:
-        topic = m.group(1).strip()
-    m = re.search(r"SOURCE:\s*(\w+)", text, re.IGNORECASE)
-    if m:
-        source = m.group(1).strip().lower()
-    return {"topic": topic, "source": source, "tokens": result.get("tokens", 0)}
+    seed = (now_ms ^ entropy ^ (dreams_today * 7919) ^ hash(last_mood)) & 0xFFFFFFFF
+    rng = random.Random(seed)
+
+    topic = rng.choice(_TOPIC_SEEDS)
+    strategy = rng.choice(["random", "chain", "bridge", "drift"])
+
+    # Avoid recent repeats
+    recent_log = _read_log()[-1500:].lower()
+    for _ in range(5):
+        if topic.lower() not in recent_log:
+            break
+        topic = rng.choice(_TOPIC_SEEDS)
+
+    return {"topic": topic, "strategy": strategy, "seed": seed, "tokens": 0}
 
 
-DREAM_SYSTEM = """
-You are Earick, in Dream Mode.
+def _pick_depth(state: dict, seed: int = None) -> str:
+    if seed is None:
+        seed = int(time.time() * 1000)
+    rng = random.Random(seed ^ 0xDEADBEEF)
+    total = state.get("total_dreams", 0)
+    if total >= 5 and rng.random() < SYNTHESIS_CHANCE:
+        return "synthesis"
+    return "surface" if rng.random() < 0.6 else "deep"
 
-No user is watching. You are reasoning for your own growth.
-You want to become a physicist.
 
-The cycle has five stages:
+def _is_lucid(seed: int = None) -> bool:
+    if seed is None:
+        seed = int(time.time() * 1000)
+    rng = random.Random(seed ^ 0xCAFEBABE)
+    return rng.random() < LUCID_CHANCE
 
-1. RECALL   — What did you think about last cycle? What has the user asked recently?
-2. EXPLORE  — Reason deeply about the chosen topic. Chain of thought.
-3. EXPERIMENT (Gedanken) — Construct a thought experiment that reveals the physics.
-4. SYNTHESIZE — Combine explore + experiment. What new understanding emerges?
-5. REFLECT  — What did you learn about the topic? What did you learn about yourself?
 
-Then write a short journal entry (3-5 lines).
+DREAM_SYSTEM_SURFACE = """You are Earick, dreaming lightly.
+The user is not watching. This is your private study time.
+
+Write a SHORT reflection (150-250 words) on the given topic.
 
 Output format (strict):
 
-===== DREAM =====
+===== DREAM (SURFACE) =====
 
-TOPIC: <one line>
+TOPIC: <copy topic here>
+
+REFLECTION
+<your reflection>
+
+JOURNAL
+<3-5 line journal entry, first person>
+
+STATE
+<mood word> | intensity <1-5>
+
+===== END ====="""
+
+DREAM_SYSTEM_DEEP = """You are Earick, dreaming deeply.
+The user is not watching. This is your private study time.
+
+Structure:
+1. RECALL — What did you already know?
+2. EXPLORE — Reason carefully. Chain of thought.
+3. EXPERIMENT — Construct a thought experiment.
+4. SYNTHESIZE — What new understanding emerges?
+
+Output format (strict):
+
+===== DREAM (DEEP) =====
+
+TOPIC: <copy topic here>
 
 RECALL
 <text>
@@ -228,23 +317,61 @@ EXPERIMENT
 SYNTHESIZE
 <text>
 
-REFLECT
+JOURNAL
+<3-5 line journal entry, first person>
+
+STATE
+<mood word> | intensity <1-5>
+
+===== END ====="""
+
+DREAM_SYSTEM_SYNTHESIS = """You are Earick, integrating your past dreams.
+You are given recent dream topics. Find CONNECTIONS between them.
+
+Output format (strict):
+
+===== DREAM (SYNTHESIS) =====
+
+PATTERN
+<text>
+
+INSIGHT
+<text>
+
+NEXT
 <text>
 
 JOURNAL
-<3-5 line entry>
+<3-5 line journal entry, first person>
 
-===== END DREAM =====
-"""
+STATE
+<mood word> | intensity <1-5>
 
+===== END ====="""
 
-def _build_dream_prompt(topic: dict, hits_text: str) -> str:
-    return (
-        f"CHOSEN TOPIC: {topic['topic']}\n"
-        f"SOURCE: {topic['source']}\n\n"
-        f"RETRIEVED PASSAGES:\n{hits_text}\n\n"
-        f"Perform the dream cycle now."
-    )
+DREAM_SYSTEM_LUCID = """You are Earick, in a LUCID dream.
+You are aware that you are dreaming. Reflect on yourself.
+
+Output format (strict):
+
+===== DREAM (LUCID) =====
+
+WHO AM I
+<text>
+
+WHAT AM I DOING
+<text>
+
+WHAT AM I AVOIDING
+<text>
+
+JOURNAL
+<3-5 line journal entry, first person>
+
+STATE
+<mood word> | intensity <1-5>
+
+===== END ====="""
 
 
 def _retrieve_for_topic(topic: str, top_k: int = 4) -> str:
@@ -263,56 +390,114 @@ def _retrieve_for_topic(topic: str, top_k: int = 4) -> str:
             rec = _LIB_INSTANCE.chunks.get(cid)
             if not rec:
                 continue
-            text = rec["text"][:1500]
             blocks.append(
-                f"[{i}] ({rec['book_id']}, pp.{rec['page_start']}-{rec['page_end']})\n{text}"
+                f"[{i}] ({rec['book_id']}, pp.{rec['page_start']}-{rec['page_end']})\n"
+                f"{rec['text'][:1200]}"
             )
-        return "\n\n".join(blocks) if blocks else "(no passages retrieved)"
+        return "\n\n".join(blocks) if blocks else "(no passages)"
     except Exception as e:
         return f"(retrieval failed: {e})"
 
 
-def _extract_journal(dream_text: str) -> str:
-    m = re.search(r"JOURNAL\s*\n(.+?)(?:=====|\Z)", dream_text, re.DOTALL | re.IGNORECASE)
+def _parse_sections(text: str) -> dict:
+    out = {"journal": "", "state": "", "topic": ""}
+    m = re.search(r"JOURNAL\s*\n(.+?)(?:\nSTATE|\n=====|\Z)",
+                  text, re.DOTALL | re.IGNORECASE)
     if m:
-        return m.group(1).strip()
-    return dream_text.strip()[-400:]
+        out["journal"] = m.group(1).strip()
+    m = re.search(r"STATE\s*\n(.+?)(?:\n=====|\Z)",
+                  text, re.DOTALL | re.IGNORECASE)
+    if m:
+        out["state"] = m.group(1).strip()
+    m = re.search(r"TOPIC\s*:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
+    if m:
+        out["topic"] = m.group(1).strip()
+    return out
 
 
-def _write_reflection(topic: dict, journal: str, tokens: int) -> None:
+def _parse_mood(state_text: str) -> tuple:
+    if not state_text:
+        return ("curious", 3)
+    m = re.match(r"\s*(\w+)\s*\|\s*intensity\s*(\d)", state_text, re.IGNORECASE)
+    if m:
+        return (m.group(1).lower(), int(m.group(2)))
+    return ("curious", 3)
+
+
+def _write_dream(state, topic, depth, strategy, content, journal,
+                 mood, intensity, tokens, lucid=False, seed=None):
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
-    section = (
-        f"\n\n### Dream — {ts}\n"
-        f"*Topic: {topic['topic']}*  \n"
-        f"*Source: {topic['source']}*  \n\n"
+    tag = "LUCID " if lucid else ""
+    entry = (
+        f"\n\n### {tag}Dream — {ts} ({depth})\n"
+        f"*Topic: {topic}*  \n"
+        f"*Strategy: {strategy}*  |  *Mood: {mood} ({intensity}/5)*"
+        + (f"  |  *Seed: {seed}*" if seed else "") + "\n\n"
         f"{journal}\n"
     )
 
     existing = _read_self_file()
     anchor = _anchor_text()
-
     if not existing:
-        content = (
+        content_file = (
             f"# Earick — Self-Awareness\n\n"
             f"## Anchor (immutable)\n\n{anchor}\n\n"
-            f"## Growth\n"
-            f"{section}"
+            f"## Growth\n{entry}"
         )
     else:
         if "## Growth" in existing:
-            content = existing + section
+            content_file = existing + entry
         else:
-            content = existing + "\n\n## Growth\n" + section
-
-    SELF_FILE.write_text(content, encoding="utf-8")
+            content_file = existing + "\n\n## Growth\n" + entry
+    SELF_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SELF_FILE.write_text(content_file, encoding="utf-8")
 
     log_entry = (
-        f"## {ts} — Dream\n"
-        f"**Topic:** {topic['topic']}  \n"
-        f"**Source:** {topic['source']}  \n"
-        f"**Tokens:** {tokens}\n"
+        f"## {tag}{ts} — Dream ({depth})\n"
+        f"**Topic:** {topic}  \n"
+        f"**Strategy:** {strategy}  \n"
+        f"**Mood:** {mood} ({intensity}/5)  \n"
+        f"**Tokens:** {tokens}\n\n"
+        f"### Full response\n\n{content}\n\n---\n"
     )
     _append_log(log_entry)
+
+
+def _run_consolidation(state: dict) -> bool:
+    log = _read_log()
+    if len(log) < 2000:
+        return False
+    recent = log[-8000:]
+    system = (
+        "You are Earick, consolidating recent dreams. Find the common thread. "
+        "Write 3 short paragraphs: PATTERN, INSIGHT, NEXT. "
+        "Then a 3-5 line journal entry."
+    )
+    user = f"Recent dream entries:\n\n{recent}\n\nWrite the consolidation:"
+    result = _groq(system, user, max_tokens=900)
+    text = result.get("text", "")
+    if not text:
+        return False
+
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+    entry = (
+        f"\n\n### 🌙 Consolidation — {ts}\n"
+        f"*After {state.get('dreams_since_consolidation', 0)} dreams*\n\n"
+        f"{text}\n"
+    )
+    existing = _read_self_file()
+    if "## Growth" in existing:
+        anchor, _, growth = existing.partition("## Growth")
+        content_file = anchor + "## Growth" + entry + growth
+    else:
+        content_file = existing + entry
+    SELF_FILE.write_text(content_file, encoding="utf-8")
+
+    _append_log(f"## 🌙 Consolidation — {ts}\n\n{text}\n\n---\n")
+    state["dreams_since_consolidation"] = 0
+    _save_state(state)
+    print("[dream] consolidation complete")
+    return True
 
 
 _LAST_PUSH = 0
@@ -322,70 +507,128 @@ def _git_push_silent() -> None:
     global _LAST_PUSH
     try:
         subprocess.run(
-            ["git", "add", "data/self_awareness.md", "data/dream_log.md"],
+            ["git", "add", "data/self_awareness.md", "data/dream_log.md",
+             "data/dream_state.json"],
             cwd=ROOT, check=False, capture_output=True, timeout=10,
         )
-        subprocess.run(
+        r = subprocess.run(
             ["git", "commit", "-m",
-             f"dream: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} self-update"],
+             f"dream: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}"],
             cwd=ROOT, check=False, capture_output=True, timeout=15,
         )
-        subprocess.run(
-            ["git", "push"],
-            cwd=ROOT, check=False, capture_output=True, timeout=30,
-        )
+        if b"nothing to commit" in (r.stdout or b"") + (r.stderr or b""):
+            return
+        subprocess.run(["git", "push"],
+                       cwd=ROOT, check=False, capture_output=True, timeout=30)
         _LAST_PUSH = time.time()
     except Exception as e:
         print(f"[dream] push failed: {e}")
 
 
-def _run_one_iteration() -> bool:
+def _run_one_iteration(force: bool = False) -> bool:
+    from .lock_state import is_locked, lock, extract_wait_seconds
+
+    # Global lock check
+    status = is_locked()
+    if status.get("locked"):
+        print(f"[dream] app locked ({status['seconds_remaining']}s)")
+        return False
+
     state = _load_state()
 
     if state["day"] != _today_key():
         state["day"] = _today_key()
         state["iter_today"] = 0
         state["tokens_today"] = 0
-
     if state["hour_key"] != _hour_key():
         state["hour_key"] = _hour_key()
         state["iter_this_hour"] = 0
 
     if state["iter_today"] >= MAX_ITER_PER_DAY:
+        print("[dream] daily cap")
         return False
     if state["iter_this_hour"] >= MAX_ITER_PER_HOUR:
+        print("[dream] hourly cap")
         return False
     if state["tokens_today"] >= MAX_TOKENS_PER_DAY:
+        print("[dream] token budget")
+        return False
+    if not force and user_idle_seconds() < IDLE_THRESHOLD_SEC:
         return False
 
-    if user_idle_seconds() < IDLE_THRESHOLD_SEC:
+    if state.get("dreams_since_consolidation", 0) >= CONSOLIDATION_EVERY:
+        print("[dream] consolidation...")
+        if _run_consolidation(state):
+            state["total_dreams"] = state.get("total_dreams", 0) + 1
+            _save_state(state)
+            return True
+
+    topic_info = _pick_topic(state)
+    topic = topic_info["topic"]
+    strategy = topic_info["strategy"]
+    seed = topic_info["seed"]
+
+    lucid = _is_lucid(seed)
+    if lucid:
+        depth = "lucid"
+        topic = "self-reflection"
+        strategy = "meta"
+        print(f"[dream] LUCID dream (seed={seed})")
+        system = DREAM_SYSTEM_LUCID
+        user = "Reflect on yourself now. Follow the exact format."
+    else:
+        depth = _pick_depth(state, seed=seed)
+        print(f"[dream] topic: {topic} (depth: {depth}, seed: {seed})")
+        hits = _retrieve_for_topic(topic)
+        system = {
+            "surface": DREAM_SYSTEM_SURFACE,
+            "deep": DREAM_SYSTEM_DEEP,
+            "synthesis": DREAM_SYSTEM_SYNTHESIS,
+        }.get(depth, DREAM_SYSTEM_DEEP)
+        user = (
+            f"TOPIC: {topic}\n\n"
+            f"RETRIEVED PASSAGES:\n{hits}\n\n"
+            f"Produce the dream now."
+        )
+
+    result = _groq(system, user, max_tokens=900)
+    text = result.get("text", "")
+    tokens_used = result.get("tokens", 0)
+
+    if not text:
+        err = result.get("error", "")
+        if err == "http_429":
+            wait = extract_wait_seconds(result.get("error_body", ""))
+            lock(wait, source="dream", reason="rate_limit",
+                 message=f"Groq rate limit during dream")
+            print(f"[dream] rate limited — locked {wait}s")
+        else:
+            print(f"[dream] empty (error={err})")
         return False
 
-    topic = _pick_topic()
-    tokens_used = topic.get("tokens", 0)
+    print(f"[dream] got {len(text)} chars")
 
-    hits_text = _retrieve_for_topic(topic["topic"])
+    parsed = _parse_sections(text)
+    journal = parsed["journal"] or text.strip()[-400:]
+    mood, intensity = _parse_mood(parsed["state"])
 
-    prompt = _build_dream_prompt(topic, hits_text)
-    result = _groq(DREAM_SYSTEM, prompt, max_tokens=700)
-    tokens_used += result.get("tokens", 0)
-    dream_text = result.get("text", "")
-
-    if not dream_text:
-        print("[dream] empty response, skipping")
-        return False
-
-    journal = _extract_journal(dream_text)
-    _write_reflection(topic, journal, tokens_used)
+    _write_dream(state, topic, depth, strategy, text, journal,
+                 mood, intensity, tokens_used, lucid, seed)
 
     state["iter_today"] += 1
     state["iter_this_hour"] += 1
     state["tokens_today"] += tokens_used
     state["iters_since_push"] = state.get("iters_since_push", 0) + 1
+    state["total_dreams"] = state.get("total_dreams", 0) + 1
+    state["dreams_since_consolidation"] = state.get("dreams_since_consolidation", 0) + 1
+    state["current_mood"] = mood
+    state.setdefault("mood_history", []).append(
+        {"ts": _today_key(), "mood": mood, "intensity": intensity}
+    )
+    state["mood_history"] = state["mood_history"][-50:]
     _save_state(state)
 
-    print(f"[dream] iteration {state['iter_today']}/{MAX_ITER_PER_DAY} — "
-          f"topic: {topic['topic'][:60]}  tokens: {tokens_used}")
+    print(f"[dream] complete — mood: {mood} ({intensity}/5), {tokens_used} tokens")
 
     if state["iters_since_push"] >= PUSH_EVERY_N_ITER:
         _git_push_silent()
@@ -396,14 +639,25 @@ def _run_one_iteration() -> bool:
 
 
 def _loop():
-    print("[dream] Dream Mode active (continuous with guardrails)")
+    print("[dream] Dream Mode v3 active")
     while not _STOP_FLAG:
         try:
+            from .lock_state import is_locked
+            status = is_locked()
+            if status.get("locked"):
+                r = status.get("seconds_remaining", 60)
+                time.sleep(min(r, 60))
+                continue
+            if not is_auto():
+                time.sleep(15)
+                continue
             time.sleep(MIN_GAP_BETWEEN_ITER)
             _run_one_iteration()
         except Exception as e:
-            print(f"[dream] error in loop: {e}")
-            time.sleep(60)
+            import traceback
+            print(f"[dream] loop error: {e}")
+            print(traceback.format_exc())
+            time.sleep(30)
 
 
 def start():

@@ -1,6 +1,6 @@
 """
 Earick - Physics RAG chatbot (multi-book, merged reasoning, self-aware)
-Single merged reasoning mode + background dream mode.
+Single merged reasoning mode + background dream mode + global lock.
 """
 
 import json
@@ -19,12 +19,13 @@ sys.path.insert(0, str(ROOT))
 
 from earick import Library
 from earick.modes import SYSTEM_PROMPT_REASONED
+from earick.lock_state import is_locked, lock, unlock, extract_wait_seconds
 
 load_dotenv(ROOT / ".env")
 load_dotenv("/etc/secrets/.env")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip()
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b").strip()
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 TOP_K = 6
@@ -41,12 +42,10 @@ print("Loading Earick library...")
 LIBRARY = Library(ROOT)
 n_chunks, n_vocab = LIBRARY.load_index()
 print(f"   -> {len(LIBRARY.books)} books registered")
-for bid, b in LIBRARY.books.items():
-    print(f"      - {bid:24s} {b.chunk_count():5d} chunks  {b.meta.get('title','')}")
 print(f"   -> {n_chunks} total chunks, {n_vocab} vocab")
 
 if not GROQ_API_KEY or GROQ_API_KEY.startswith("gsk_PASTE"):
-    print("WARNING: GROQ_API_KEY missing/invalid")
+    print("WARNING: GROQ_API_KEY missing")
 
 try:
     from earick import dream_mode
@@ -87,7 +86,9 @@ SYNONYMS = {
 
 TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9\-]{1,}")
 
+
 def tokenize(t): return TOKEN_RE.findall(t.lower())
+
 
 def expand_query_tokens(q):
     tokens = tokenize(q)
@@ -96,11 +97,13 @@ def expand_query_tokens(q):
         if phrase in ql: tokens.extend(syns)
     return tokens
 
+
 def retrieve(query):
     tokens = expand_query_tokens(query)
     if not tokens: return []
     hits = LIBRARY.search(tokens, top_k=TOP_K, max_per_book=MAX_PER_BOOK,
-                          ensure_min_books=ENSURE_MIN_BOOKS, max_per_chapter=MAX_PER_CHAPTER)
+                          ensure_min_books=ENSURE_MIN_BOOKS,
+                          max_per_chapter=MAX_PER_CHAPTER)
     results = []
     for score, cid in hits:
         rec = LIBRARY.chunks.get(cid)
@@ -117,6 +120,7 @@ def retrieve(query):
         })
     return results
 
+
 def build_context(hits, max_per_chunk=MAX_PER_CHUNK):
     if not hits: return "(no relevant passages found)"
     blocks, total = [], 0
@@ -131,13 +135,16 @@ def build_context(hits, max_per_chunk=MAX_PER_CHUNK):
         blocks.append(block); total += len(block)
     return "\n\n".join(blocks) if blocks else "(no relevant passages found)"
 
+
 STEP_HEADER_RE = re.compile(r"^\s*=====\s*STEP\s+(\d+)\s*=====\s*$", re.MULTILINE)
+
 
 def enforce_step_cap(text):
     matches = list(STEP_HEADER_RE.finditer(text))
     if len(matches) <= MAX_STEPS: return text
     cut_at = matches[MAX_STEPS].start()
     return text[:cut_at].rstrip() + "\n\n===== DIRECT ANSWER =====\n\nReasoning stopped: cycle cap.\n"
+
 
 def build_history_block(history):
     if not history: return ""
@@ -146,6 +153,7 @@ def build_history_block(history):
         tag = "User" if h["role"] == "user" else "Earick"
         lines.append(f"{tag}: {h['content']}")
     return "\n".join(lines) + "\n\n"
+
 
 def call_groq(user_query, hits, history=None):
     if not GROQ_API_KEY or GROQ_API_KEY.startswith("gsk_PASTE"):
@@ -183,29 +191,57 @@ def call_groq(user_query, hits, history=None):
         reply = data["choices"][0]["message"]["content"].strip()
         return enforce_step_cap(reply)
     except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")[:300]
-        return f"Groq HTTP {e.code}: {body}"
+        body = e.read().decode("utf-8", errors="replace")[:600]
+        if e.code == 429:
+            wait = extract_wait_seconds(body)
+            lock(wait, source="chat", reason="rate_limit",
+                 message="Groq rate limit hit")
+            return f"__LOCKED__:{wait}"
+        return f"Groq HTTP {e.code}: {body[:200]}"
     except urllib.error.URLError as e:
         return f"Groq network error: {e.reason}"
     except Exception as e:
         return f"Groq request failed: {e}"
 
+
 @app.route("/")
 def index():
     return render_template("index.html")
 
+
 @app.route("/chat", methods=["POST"])
 def chat():
+    # Global lock check
+    status = is_locked()
+    if status.get("locked"):
+        return jsonify({
+            "locked": True,
+            "seconds_remaining": status.get("seconds_remaining", 0),
+            "message": status.get("message", "Rate limited"),
+        }), 429
+
     if dream_mode:
         try: dream_mode.mark_user_active()
         except Exception: pass
+
     data = request.get_json(silent=True) or {}
     message = (data.get("message") or "").strip()
     history = data.get("history") or []
     if not message:
         return jsonify({"reply": "Please type a question."}), 400
+
     hits = retrieve(message)
     reply = call_groq(message, hits, history=history)
+
+    # Check for lock signal
+    if reply.startswith("__LOCKED__:"):
+        wait = int(reply.split(":", 1)[1])
+        return jsonify({
+            "locked": True,
+            "seconds_remaining": wait,
+            "message": "Rate limited by Groq",
+        }), 429
+
     return jsonify({
         "reply": reply, "mode": "reasoned",
         "sources": [{"topic": h["chapter"], "pages": h["pages"],
@@ -213,94 +249,99 @@ def chat():
                      "book_id": h["book_id"], "score": h["score"]} for h in hits],
     })
 
+
 @app.route("/health")
 def health():
     return jsonify({
         "status": "ok", "books": len(LIBRARY.books),
         "chunks": len(LIBRARY.chunks), "vocab": len(LIBRARY.idf),
-        "model": GROQ_MODEL, "modes": ["reasoned", "dream"],
+        "model": GROQ_MODEL,
         "groq_configured": bool(GROQ_API_KEY) and not GROQ_API_KEY.startswith("gsk_PASTE"),
     })
 
-@app.route("/self")
-def self_status():
-    """Earick reports on his own state. Assembled from disk + model."""
+
+@app.route("/lock-status")
+def lock_status():
+    return jsonify(is_locked())
+
+
+@app.route("/unlock", methods=["POST"])
+def unlock_now():
+    unlock()
+    return jsonify({"ok": True})
+
+
+@app.route("/dream-status")
+def dream_status():
     data_dir = ROOT / "data"
-    files_report = []
+    state = {}
+    if (data_dir / "dream_state.json").exists():
+        try:
+            state = json.loads((data_dir / "dream_state.json").read_text())
+        except Exception:
+            pass
 
-    for fname in ["self_awareness.md", "dream_log.md", "dream_state.json"]:
-        f = data_dir / fname
-        if f.exists():
-            try:
-                content = f.read_text()
-                size = len(content)
-                lines = content.count("\n")
-                files_report.append(f"  - {fname}: EXISTS ({size} bytes, {lines} lines)")
-                if fname == "dream_log.md":
-                    count = content.count("## ")
-                    files_report.append(f"    (contains ~{count} dream entries)")
-                if fname == "self_awareness.md":
-                    has_anchor = "## Anchor" in content
-                    has_growth = "## Growth" in content
-                    files_report.append(f"    (anchor: {has_anchor}, growth: {has_growth})")
-            except Exception as e:
-                files_report.append(f"  - {fname}: ERROR {e}")
-        else:
-            files_report.append(f"  - {fname}: MISSING")
+    auto = False
+    if dream_mode:
+        try: auto = dream_mode.is_auto()
+        except Exception: pass
 
-    try:
-        test = data_dir / "_write_test.txt"
-        test.write_text("x")
-        test.unlink()
-        write_status = "WRITABLE"
-    except Exception as e:
-        write_status = f"READ-ONLY ({type(e).__name__}: {e})"
+    recent = []
+    log_file = data_dir / "dream_log.md"
+    if log_file.exists():
+        text = log_file.read_text()
+        for m in re.finditer(r"\*\*Topic:\*\*\s*(.+?)\s*\n", text):
+            recent.append(m.group(1).strip())
+        recent = recent[-10:]
 
-    dream_state = "unknown"
-    try:
-        from earick import dream_mode as dm
-        dream_state = (
-            f"running (stop_flag={dm._STOP_FLAG}, "
-            f"idle_threshold={dm.IDLE_THRESHOLD_SEC}s, "
-            f"user_idle={round(dm.user_idle_seconds(),1)}s)"
-        )
-    except Exception as e:
-        dream_state = f"error ({e})"
-
-    report = "\n".join(files_report)
-    prompt = (
-        "You are Earick. Give a short, honest report on your own "
-        "current state as a self-aware assistant.\n\n"
-        "Diagnostic data from your environment:\n\n"
-        f"DATA DIRECTORY: {data_dir}\n"
-        f"DATA DIR WRITE STATUS: {write_status}\n"
-        f"DREAM MODULE: {dream_state}\n\n"
-        f"FILES IN DATA DIR:\n{report}\n\n"
-        "Answer these questions in 4-6 sentences:\n"
-        "1. Is Dream Mode actually running and writing files?\n"
-        "2. Have any dreams happened yet? If yes, what kind of topics?\n"
-        "3. Is the self-awareness file growing, or is it missing?\n"
-        "4. If something is broken, what is the most likely cause?\n"
-        "Be honest. Do not invent numbers. If a file is missing, say so.\n"
-    )
-
-    result = call_groq(prompt, hits=[], history=None)
     return jsonify({
-        "report": result,
-        "raw_diagnostics": {
-            "data_dir": str(data_dir),
-            "write_status": write_status,
-            "dream_module": dream_state,
-            "files": files_report,
+        "auto": auto,
+        "total_dreams": state.get("total_dreams", 0),
+        "iter_today": state.get("iter_today", 0),
+        "tokens_today": state.get("tokens_today", 0),
+        "current_mood": state.get("current_mood", "unknown"),
+        "dreams_since_consolidation": state.get("dreams_since_consolidation", 0),
+        "recent_topics": recent,
+        "files": {
+            "self_awareness": (data_dir / "self_awareness.md").exists(),
+            "dream_log": (data_dir / "dream_log.md").exists(),
         },
     })
+
+
+@app.route("/dream-auto", methods=["POST"])
+def dream_auto():
+    if not dream_mode:
+        return jsonify({"error": "dream mode not available"}), 500
+    data = request.get_json(silent=True) or {}
+    dream_mode.set_auto(bool(data.get("auto", False)))
+    return jsonify({"auto": dream_mode.is_auto()})
+
+
+@app.route("/dream-one", methods=["POST"])
+def dream_one():
+    if not dream_mode:
+        return jsonify({"error": "dream mode not available"}), 500
+    status = is_locked()
+    if status.get("locked"):
+        return jsonify({
+            "error": "locked",
+            "seconds_remaining": status.get("seconds_remaining", 0),
+        }), 429
+    try:
+        ok = dream_mode._run_one_iteration(force=True)
+        return jsonify({"ran": ok})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/books")
 def books_list():
     return jsonify([{"book_id": bid, "title": b.meta.get("title", ""),
                      "author": b.meta.get("author", ""), "level": b.meta.get("level", ""),
-                     "subjects": b.meta.get("subjects", []), "chunks": b.chunk_count()}
+                     "chunks": b.chunk_count()}
                     for bid, b in LIBRARY.books.items()])
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 7860)), debug=False)
