@@ -1,0 +1,18 @@
+name: earick
+description: Earick — physics and math reasoning assistant
+version: 1.0.0+1
+publish_to: none
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.1.0
+  shared_preferences: ^2.2.0
+  flutter_markdown: ^0.6.18
+  flutter_math_fork: ^0.7.2
+
+flutter:
+  uses-material-design: true
