@@ -1,0 +1,23 @@
+{
+  "day": "2026-09-21",
+  "iter_today": 2,
+  "iter_this_hour": 2,
+  "hour_key": "2026-09-21-23",
+  "tokens_today": 4716,
+  "iters_since_push": 2,
+  "total_dreams": 2,
+  "dreams_since_consolidation": 2,
+  "current_mood": "curious",
+  "mood_history": [
+    {
+      "ts": "2026-09-21",
+      "mood": "curious",
+      "intensity": 3
+    },
+    {
+      "ts": "2026-09-21",
+      "mood": "curious",
+      "intensity": 3
+    }
+  ]
+}
