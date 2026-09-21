@@ -1,0 +1,130 @@
+{
+  "young_freedman": {
+    "book_id": "young_freedman",
+    "title": "University Physics with Modern Physics",
+    "author": "Young & Freedman",
+    "edition": "13th",
+    "year": 2011,
+    "level": "intro",
+    "subjects": [
+      "mechanics",
+      "thermodynamics",
+      "electromagnetism",
+      "waves",
+      "optics",
+      "relativity",
+      "quantum",
+      "nuclear"
+    ]
+  },
+  "hobson_gr": {
+    "book_id": "hobson_gr",
+    "title": "General Relativity: An Introduction for Physicists",
+    "author": "Hobson, Efstathiou & Lasenby",
+    "edition": "1st",
+    "year": 2006,
+    "level": "undergrad",
+    "subjects": [
+      "relativity",
+      "gravity",
+      "cosmology",
+      "differential geometry"
+    ]
+  },
+  "string_theory_notes": {
+    "book_id": "string_theory_notes",
+    "title": "String Theory Notes",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "grad",
+    "subjects": [
+      "quantum",
+      "string theory",
+      "physics"
+    ]
+  },
+  "introductory_physics": {
+    "book_id": "introductory_physics",
+    "title": "Introductory Physics",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "intro",
+    "subjects": [
+      "mechanics",
+      "waves",
+      "thermodynamics"
+    ]
+  },
+  "quantum_physics": {
+    "book_id": "quantum_physics",
+    "title": "Quantum Physics",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "undergrad",
+    "subjects": [
+      "quantum",
+      "wave",
+      "mechanics"
+    ]
+  },
+  "condensed_matter": {
+    "book_id": "condensed_matter",
+    "title": "Condensed Matter Physics",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "grad",
+    "subjects": [
+      "condensed matter",
+      "solid state"
+    ]
+  },
+  "pal_particle_physics": {
+    "book_id": "pal_particle_physics",
+    "title": "An Introductory Course of Particle Physics",
+    "author": "Palash B. Pal",
+    "edition": "",
+    "year": 0,
+    "level": "undergrad",
+    "subjects": [
+      "particle",
+      "standard model"
+    ]
+  },
+  "kaplan_nuclear": {
+    "book_id": "kaplan_nuclear",
+    "title": "Nuclear Physics",
+    "author": "Irving Kaplan",
+    "edition": "2nd",
+    "year": 1963,
+    "level": "undergrad",
+    "subjects": [
+      "nuclear",
+      "radioactivity",
+      "fission"
+    ]
+  },
+  "phys3305": {
+    "book_id": "phys3305",
+    "title": "PHYS3305 Course Book",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "undergrad",
+    "subjects": [
+      "physics"
+    ]
+  },
+  "a": {
+    "book_id": "a",
+    "title": "A",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "undergrad",
+    "subjects": []
+  }
+}

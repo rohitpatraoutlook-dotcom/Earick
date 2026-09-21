@@ -274,3 +274,6 @@ data/books/*/chunks/
 data/books/*/progress.json
 data/index/
 data/books.json.local
+!data/index/
+!data/index/chunks_all.jsonl
+!data/index/index_all.json

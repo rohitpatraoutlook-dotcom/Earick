@@ -1,6 +1,8 @@
 """
-Earick - Physics RAG chatbot (multi-book, multi-mode)
-Modes: ANSWER, EXPLORE, GEDANKEN
+Earick - Physics RAG chatbot (multi-book, multi-mode, multi-chat)
+
+Modes:  ANSWER, EXPLORE, GEDANKEN
+Memory: per-chat history (client-side) used for prompt + retrieval
 """
 
 import json
@@ -41,6 +43,10 @@ MAX_PER_CHAPTER = 2
 MAX_CONTEXT_CHARS = 7000
 MAX_PER_CHUNK = 1800
 MAX_CYCLES = 3
+
+# Chat memory
+HISTORY_TURNS = 4                 # how many recent user+assistant turns to keep
+HISTORY_CHARS_PER_MSG = 1200      # truncate very long messages in history
 
 
 app = Flask(
@@ -98,6 +104,9 @@ SYNONYMS = {
     "fusion": ["nuclear", "hydrogen", "helium"],
     "superconduct": ["condensed", "matter", "resistance"],
     "quark": ["particle", "standard", "model"],
+    "dark flow": ["dipole", "anisotropy", "bulk", "motion", "cmb"],
+    "dark matter": ["halo", "rotation", "curve"],
+    "dark energy": ["cosmological", "constant", "acceleration"],
 }
 
 
@@ -115,6 +124,41 @@ def expand_query_tokens(query):
         if phrase in q_lower:
             tokens.extend(syns)
     return tokens
+
+
+# ------------------------------------------------------------------
+# History helpers
+# ------------------------------------------------------------------
+def normalize_history(raw):
+    """Take the client-sent history array and return a clean list."""
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for item in raw[-HISTORY_TURNS * 2:]:
+        if not isinstance(item, dict):
+            continue
+        role = item.get("role")
+        content = (item.get("content") or "").strip()
+        if role not in ("user", "assistant") or not content:
+            continue
+        if len(content) > HISTORY_CHARS_PER_MSG:
+            content = content[:HISTORY_CHARS_PER_MSG] + " [...]"
+        out.append({"role": role, "content": content})
+    return out
+
+
+def retrieve_with_history(query, history):
+    """
+    Option B: history contributes to retrieval.
+    Concatenate the last user turn(s) with the current query for better
+    matching on follow-ups like 'what about its relativistic version?'.
+    """
+    context_query = query
+    if history:
+        last_user = [h["content"] for h in history if h["role"] == "user"]
+        if last_user:
+            context_query = last_user[-1] + " " + query
+    return retrieve(context_query)
 
 
 # ------------------------------------------------------------------
@@ -181,7 +225,7 @@ def build_context(hits, max_per_chunk=MAX_PER_CHUNK):
 
 
 # ------------------------------------------------------------------
-# Cycle-cap safety net
+# Cycle-cap safety net (explore mode)
 # ------------------------------------------------------------------
 CYCLE_HEADER_RE = re.compile(r"^\s*=====\s*CYCLE\s+(\d+)\s*=====\s*$", re.MULTILINE)
 
@@ -195,22 +239,40 @@ def enforce_cycle_cap(text):
 
 
 # ------------------------------------------------------------------
+# Prompt assembly with chat history
+# ------------------------------------------------------------------
+def build_history_block(history):
+    """Render prior turns as text the model can read as context."""
+    if not history:
+        return ""
+    lines = ["CONVERSATION SO FAR:"]
+    for h in history:
+        tag = "User" if h["role"] == "user" else "Earick"
+        lines.append(f"{tag}: {h['content']}")
+    return "\n".join(lines) + "\n\n"
+
+
+# ------------------------------------------------------------------
 # Groq call
 # ------------------------------------------------------------------
-def call_groq(user_query, hits, mode="answer"):
+def call_groq(user_query, hits, mode="answer", history=None):
     if not GROQ_API_KEY or GROQ_API_KEY.startswith("gsk_PASTE"):
         return "Groq API key missing. Add GROQ_API_KEY to .env and restart."
 
     context = build_context(hits)
+    history_block = build_history_block(history or [])
 
     if mode == "explore":
         system_prompt = SYSTEM_PROMPT_EXPLORE
         user_prompt = (
-            "PHYSICS CONTEXT (retrieved from the library):\n"
+            history_block
+            + "PHYSICS CONTEXT (retrieved from the library):\n"
             "-----\n"
             f"{context}\n"
             "-----\n\n"
             f"EXPLORATION QUESTION: {user_query}\n\n"
+            "If the CONVERSATION SO FAR is relevant (follow-ups, references "
+            "to earlier questions), account for it. Otherwise ignore it.\n"
             "Begin the loop. Output only the formatted cycles and final section."
         )
         max_tokens = 2400
@@ -218,11 +280,14 @@ def call_groq(user_query, hits, mode="answer"):
     elif mode == "gedanken":
         system_prompt = SYSTEM_PROMPT_GEDANKEN
         user_prompt = (
-            "Physics context from the textbooks:\n"
+            history_block
+            + "Physics context from the textbooks:\n"
             "-----\n"
             f"{context}\n"
             "-----\n\n"
             f"Student question: {user_query}\n\n"
+            "If the CONVERSATION SO FAR changes what 'the question' is "
+            "(e.g. a follow-up), honour that. Otherwise ignore it.\n"
             "Construct a thought experiment to reveal the physics:"
         )
         max_tokens = 1400
@@ -230,12 +295,14 @@ def call_groq(user_query, hits, mode="answer"):
     else:
         system_prompt = SYSTEM_PROMPT_ANSWER
         user_prompt = (
-            "Physics context from the textbooks:\n"
+            history_block
+            + "Physics context from the textbooks:\n"
             "-----\n"
             f"{context}\n"
             "-----\n\n"
             f"Student question: {user_query}\n\n"
-            "Answer as Earick:"
+            "If the CONVERSATION SO FAR is relevant, use it. "
+            "Otherwise ignore it. Answer as Earick:"
         )
         max_tokens = 800
         temperature = 0.4
@@ -290,14 +357,16 @@ def chat():
     data = request.get_json(silent=True) or {}
     message = (data.get("message") or "").strip()
     mode = (data.get("mode") or "answer").strip().lower()
+    history = normalize_history(data.get("history"))
+
     if mode not in ("answer", "explore", "gedanken"):
         mode = "answer"
 
     if not message:
         return jsonify({"reply": "Please type a physics question."}), 400
 
-    hits = retrieve(message)
-    reply = call_groq(message, hits, mode=mode)
+    hits = retrieve_with_history(message, history)
+    reply = call_groq(message, hits, mode=mode, history=history)
 
     return jsonify({
         "reply": reply,
@@ -325,6 +394,7 @@ def health():
         "vocab": len(LIBRARY.idf),
         "model": GROQ_MODEL,
         "modes": ["answer", "explore", "gedanken"],
+        "history_turns": HISTORY_TURNS,
         "groq_configured": bool(GROQ_API_KEY) and not GROQ_API_KEY.startswith("gsk_PASTE"),
     })
 
@@ -345,4 +415,6 @@ def books_list():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    import os as _os
+    _port = int(_os.getenv("PORT", 7860))
+    app.run(host="0.0.0.0", port=_port, debug=False)
