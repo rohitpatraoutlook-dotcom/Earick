@@ -353,6 +353,62 @@ def dream_reset():
     return jsonify({"reset": True, "removed": removed})
 
 
+@app.route("/push-now", methods=["POST", "GET"])
+def push_now():
+    """Debug endpoint: manually trigger git push to GitHub."""
+    import subprocess as _sp
+    try:
+        token = (os.getenv("GITHUB_TOKEN") or "").strip()
+        debug = {
+            "token_present": bool(token),
+            "token_len": len(token),
+            "token_prefix": token[:7] if token else "",
+            "token_suffix": token[-4:] if len(token) > 4 else "",
+        }
+
+        if not token:
+            return jsonify({"error": "GITHUB_TOKEN not set", "debug": debug}), 500
+
+        remote_url = f"https://{token}@github.com/rohitpatraoutlook-dotcom/Earick.git"
+
+        r1 = _sp.run(
+            ["git", "remote", "set-url", "origin", remote_url],
+            cwd=ROOT, capture_output=True, text=True, timeout=10,
+        )
+        debug["remote_rc"] = r1.returncode
+        debug["remote_err"] = r1.stderr[:200]
+
+        _sp.run(["git", "config", "user.email", "earick@earick.local"],
+                cwd=ROOT, capture_output=True, timeout=5)
+        _sp.run(["git", "config", "user.name", "Earick Dream"],
+                cwd=ROOT, capture_output=True, timeout=5)
+
+        r2 = _sp.run(["git", "add", "data/self_awareness.md",
+                      "data/dream_log.md", "data/dream_state.json"],
+                     cwd=ROOT, capture_output=True, text=True, timeout=10)
+        debug["add_rc"] = r2.returncode
+
+        r3 = _sp.run(["git", "commit", "-m", "manual push via /push-now"],
+                     cwd=ROOT, capture_output=True, text=True, timeout=15)
+        debug["commit_rc"] = r3.returncode
+        debug["commit_out"] = (r3.stdout or "")[:300]
+        debug["commit_err"] = (r3.stderr or "")[:300]
+
+        r4 = _sp.run(["git", "push"],
+                     cwd=ROOT, capture_output=True, text=True, timeout=60)
+        debug["push_rc"] = r4.returncode
+        debug["push_out"] = (r4.stdout or "")[:500]
+        debug["push_err"] = (r4.stderr or "")[:500]
+
+        return jsonify({"success": r4.returncode == 0, "debug": debug})
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "error": str(e),
+            "trace": traceback.format_exc()[:1000],
+        }), 500
+
+
 @app.route("/books")
 def books_list():
     return jsonify([{"book_id": bid, "title": b.meta.get("title", ""),
