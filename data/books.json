@@ -168,5 +168,32 @@
     "year": 0,
     "level": "undergrad",
     "subjects": []
+  },
+  "at": {
+    "book_id": "at",
+    "title": "AT",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "undergrad",
+    "subjects": []
+  },
+  "david_s_dummit_richard_m_foote_abstract_": {
+    "book_id": "david_s_dummit_richard_m_foote_abstract_",
+    "title": "David S Dummit Richard M Foote Abstract Algeb 230928 225848",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "undergrad",
+    "subjects": []
+  },
+  "shafarevich_basic_algebraic_geometry_1": {
+    "book_id": "shafarevich_basic_algebraic_geometry_1",
+    "title": "Shafarevich Basic Algebraic Geometry 1",
+    "author": "Unknown",
+    "edition": "",
+    "year": 0,
+    "level": "intro",
+    "subjects": []
   }
 }
