@@ -222,6 +222,79 @@ def health():
         "groq_configured": bool(GROQ_API_KEY) and not GROQ_API_KEY.startswith("gsk_PASTE"),
     })
 
+@app.route("/self")
+def self_status():
+    """Earick reports on his own state. Assembled from disk + model."""
+    data_dir = ROOT / "data"
+    files_report = []
+
+    for fname in ["self_awareness.md", "dream_log.md", "dream_state.json"]:
+        f = data_dir / fname
+        if f.exists():
+            try:
+                content = f.read_text()
+                size = len(content)
+                lines = content.count("\n")
+                files_report.append(f"  - {fname}: EXISTS ({size} bytes, {lines} lines)")
+                if fname == "dream_log.md":
+                    count = content.count("## ")
+                    files_report.append(f"    (contains ~{count} dream entries)")
+                if fname == "self_awareness.md":
+                    has_anchor = "## Anchor" in content
+                    has_growth = "## Growth" in content
+                    files_report.append(f"    (anchor: {has_anchor}, growth: {has_growth})")
+            except Exception as e:
+                files_report.append(f"  - {fname}: ERROR {e}")
+        else:
+            files_report.append(f"  - {fname}: MISSING")
+
+    try:
+        test = data_dir / "_write_test.txt"
+        test.write_text("x")
+        test.unlink()
+        write_status = "WRITABLE"
+    except Exception as e:
+        write_status = f"READ-ONLY ({type(e).__name__}: {e})"
+
+    dream_state = "unknown"
+    try:
+        from earick import dream_mode as dm
+        dream_state = (
+            f"running (stop_flag={dm._STOP_FLAG}, "
+            f"idle_threshold={dm.IDLE_THRESHOLD_SEC}s, "
+            f"user_idle={round(dm.user_idle_seconds(),1)}s)"
+        )
+    except Exception as e:
+        dream_state = f"error ({e})"
+
+    report = "\n".join(files_report)
+    prompt = (
+        "You are Earick. Give a short, honest report on your own "
+        "current state as a self-aware assistant.\n\n"
+        "Diagnostic data from your environment:\n\n"
+        f"DATA DIRECTORY: {data_dir}\n"
+        f"DATA DIR WRITE STATUS: {write_status}\n"
+        f"DREAM MODULE: {dream_state}\n\n"
+        f"FILES IN DATA DIR:\n{report}\n\n"
+        "Answer these questions in 4-6 sentences:\n"
+        "1. Is Dream Mode actually running and writing files?\n"
+        "2. Have any dreams happened yet? If yes, what kind of topics?\n"
+        "3. Is the self-awareness file growing, or is it missing?\n"
+        "4. If something is broken, what is the most likely cause?\n"
+        "Be honest. Do not invent numbers. If a file is missing, say so.\n"
+    )
+
+    result = call_groq(prompt, hits=[], history=None)
+    return jsonify({
+        "report": result,
+        "raw_diagnostics": {
+            "data_dir": str(data_dir),
+            "write_status": write_status,
+            "dream_module": dream_state,
+            "files": files_report,
+        },
+    })
+
 @app.route("/books")
 def books_list():
     return jsonify([{"book_id": bid, "title": b.meta.get("title", ""),
