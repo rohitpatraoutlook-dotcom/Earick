@@ -157,8 +157,7 @@ def call_groq(user_query, hits, history=None):
     user_prompt = (
         history_block
         + "PHYSICS/MATH CONTEXT:\n-----\n" + context + "\n-----\n\n"
-        + "QUESTION: " + user_query + "\n\n"
-        + "Produce the reasoned answer now."
+        + "QUESTION: " + user_query
     )
 
     payload = {
