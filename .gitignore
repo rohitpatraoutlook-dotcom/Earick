@@ -216,3 +216,42 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ============================================================
+# Earick project-specific ignores
+# ============================================================
+
+# --- Copyrighted book content (do NOT commit) ---
+data/book.pdf
+data/*.pdf
+
+# --- Pipeline outputs derived from the book (do NOT commit) ---
+data/raw/*
+data/clean/*
+data/chunks/chunks.jsonl
+data/chunks/index.json
+data/chunks/*.npy
+data/chunks/*.pkl
+data/progress.json
+
+# --- Secrets ---
+.env
+.env.local
+
+# --- Logs ---
+logs/*
+*.log
+
+# --- Termux / Android ---
+storage/
+.storage/
+
+# ============================================================
+# Keep the folder structure (empty dirs need a tracked file)
+# ============================================================
+!data/raw/.gitkeep
+!data/clean/.gitkeep
+!data/chunks/.gitkeep
+!logs/.gitkeep
+!scripts/.gitkeep
+!templates/.gitkeep
