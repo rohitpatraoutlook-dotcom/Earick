@@ -255,3 +255,12 @@ storage/
 !logs/.gitkeep
 !scripts/.gitkeep
 !templates/.gitkeep
+
+# --- Earick pipeline outputs (never commit) ---
+data/raw/page_*.txt
+data/clean/page_*.txt
+data/chunks/chunks.jsonl
+data/chunks/index.json
+data/progress.json
+*.pyc
+__pycache__/
