@@ -10,35 +10,18 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <style>
-:root{
-  --bg:#ffffff;--bg-subtle:#f7f7f8;
-  --surface:#ffffff;--surface-2:#f3f4f6;--surface-3:#e5e7eb;
-  --border:#e5e7eb;--border-hover:#d1d5db;
-  --text:#1a1a1a;--text-dim:#6b7280;--text-faint:#9ca3af;
-  --user-bg:#f3f4f6;--bot-bg:#ffffff;
-  --accent:#2563eb;--accent-hover:#1d4ed8;
-  --grounded:#16a34a;--extension:#d97706;
-  --speculative:#dc2626;--question:#2563eb;
-  --font-body:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',system-ui,sans-serif;
-  --font-display:'Charter','Iowan Old Style',Georgia,'Times New Roman',serif;
-  --font-mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,monospace;
-  --radius:12px;--radius-lg:20px;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.04);
-  --shadow-md:0 4px 12px rgba(0,0,0,.06);
-  --shadow-lg:0 12px 32px rgba(0,0,0,.08);
-}
+:root{--bg:#fff;--bg-subtle:#f7f7f8;--surface:#fff;--surface-2:#f3f4f6;--surface-3:#e5e7eb;--border:#e5e7eb;--border-hover:#d1d5db;--text:#1a1a1a;--text-dim:#6b7280;--text-faint:#9ca3af;--user-bg:#f3f4f6;--accent:#2563eb;--grounded:#16a34a;--extension:#d97706;--speculative:#dc2626;--question:#2563eb;--learn:#7c3aed;--font-body:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',system-ui,sans-serif;--font-display:'Charter','Iowan Old Style',Georgia,serif;--font-mono:ui-monospace,SFMono-Regular,Menlo,monospace;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 12px rgba(0,0,0,.06);--shadow-lg:0 12px 32px rgba(0,0,0,.08);}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;}
 body{font-family:var(--font-body);background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:13px;line-height:1.55;-webkit-font-smoothing:antialiased;}
 .sidebar{width:230px;flex-shrink:0;background:var(--bg-subtle);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;transition:transform .28s ease;}
 .sidebar-header{padding:12px 10px 8px;display:flex;flex-direction:column;gap:8px;}
 .brand{display:flex;align-items:center;padding:2px 6px;}
-.brand-name{font-family:var(--font-display);font-size:.92rem;font-weight:600;letter-spacing:-.01em;color:var(--text);}
+.brand-name{font-family:var(--font-display);font-size:.92rem;font-weight:600;color:var(--text);}
 .new-chat-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 10px;font-size:.74rem;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .15s;box-shadow:var(--shadow-sm);width:100%;text-align:left;}
 .new-chat-btn:hover{background:var(--surface-2);border-color:var(--border-hover);}
 .new-chat-btn .plus{font-size:.95rem;line-height:1;color:var(--text-dim);}
 .chat-list{flex:1;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:1px;}
-.chat-section-label{font-size:.6rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;padding:8px 10px 4px;font-weight:600;}
 .chat-item{padding:7px 9px;border-radius:8px;cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:6px;position:relative;}
 .chat-item:hover{background:var(--surface-3);}
 .chat-item.active{background:var(--surface-3);}
@@ -57,7 +40,11 @@ header{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;align
 .icon-btn.active{color:var(--text);background:var(--surface-3);border-color:var(--border-hover);}
 .head-info{flex:1;min-width:0;}
 .head-title{font-size:.82rem;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.head-sub{font-size:.62rem;color:var(--text-faint);margin-top:1px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;overflow:hidden;}
+.head-sub{font-size:.62rem;color:var(--text-faint);margin-top:1px;display:flex;gap:6px;align-items:center;}
+.fab{position:fixed;bottom:130px;right:18px;width:44px;height:44px;border-radius:50%;background:#1a1a1a;color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:25;transition:transform .15s,opacity .15s;font-size:20px;font-family:inherit;}
+.fab:hover{transform:scale(1.08);opacity:.92;}
+.fab:active{transform:scale(.95);}
+.fab.hidden{opacity:0;pointer-events:none;transform:scale(.8);}
 main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:24px 16px 180px;display:flex;flex-direction:column;gap:18px;}
 .msg{max-width:100%;line-height:1.6;font-size:.82rem;word-wrap:break-word;overflow-wrap:break-word;animation:fade .3s ease;}
 @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
@@ -72,13 +59,12 @@ main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:24px 16px 180px;dis
 .msg.bot code{background:var(--surface-2);border:1px solid var(--border);padding:1px 5px;border-radius:4px;font-family:var(--font-mono);font-size:.8em;color:#374151;}
 .msg.bot pre{background:#f9fafb;border:1px solid var(--border);border-radius:8px;padding:10px 12px;overflow-x:auto;font-family:var(--font-mono);font-size:.75em;margin:10px 0;color:#374151;}
 .msg.bot pre code{background:none;border:none;padding:0;}
-.msg.bot h1{font-family:var(--font-display);color:var(--text);font-weight:600;font-size:1.05rem;line-height:1.3;margin:1em 0 .4em;letter-spacing:-.01em;}
+.msg.bot h1{font-family:var(--font-display);color:var(--text);font-weight:600;font-size:1.05rem;line-height:1.3;margin:1em 0 .4em;}
 .msg.bot h2{font-family:var(--font-display);color:var(--text);font-weight:600;font-size:.95rem;line-height:1.3;margin:1em 0 .4em;}
 .msg.bot h3{font-family:var(--font-display);color:var(--text);font-weight:600;font-size:.88rem;line-height:1.3;margin:.9em 0 .35em;}
 .msg.bot h4{font-size:.82rem;color:var(--text-dim);font-weight:600;margin:.8em 0 .3em;}
 .msg.bot ul,.msg.bot ol{margin:.5em 0 .5em 1.3em;}
 .msg.bot li{margin:.22em 0;font-size:.82rem;}
-.msg.bot li::marker{color:var(--text-faint);}
 .msg.bot blockquote{border-left:2px solid var(--border-hover);padding:.3em 0 .3em .9em;margin:.6em 0;color:var(--text-dim);font-style:italic;font-size:.8rem;}
 .msg.bot hr{border:none;border-top:1px solid var(--border);margin:1em 0;}
 .katex-display{margin:12px 0 !important;overflow-x:auto;overflow-y:hidden;padding:10px 14px;background:#f9fafb;border-radius:8px;border-left:3px solid var(--accent);}
@@ -100,17 +86,30 @@ main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:24px 16px 180px;dis
 .typing-dots span:nth-child(2){animation-delay:.15s;}
 .typing-dots span:nth-child(3){animation-delay:.3s;}
 @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.35;}30%{transform:translateY(-3px);opacity:1;}}
-.mode-tabs{display:inline-flex;gap:2px;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:2px;}
-.mode-tab{background:transparent;border:none;color:var(--text-dim);font-size:.7rem;padding:5px 12px;border-radius:7px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;font-weight:500;}
-.mode-tab:hover{color:var(--text);}
-.mode-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm);}
-.mode-tab[data-mode="explore"].active{color:var(--extension);}
-.mode-tab[data-mode="gedanken"].active{color:var(--question);}
+.reasoning-header{display:inline-flex;align-items:center;gap:6px;background:#eef2ff;border:1px solid #c7d2fe;color:#4338ca;font-size:.62rem;padding:3px 9px;border-radius:7px;margin-bottom:12px;font-weight:600;}
+.section-label{font-size:.62rem;color:var(--text-faint);letter-spacing:.12em;text-transform:uppercase;margin:20px 0 10px;padding-top:12px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:8px;}
+.section-label:first-of-type{border-top:none;padding-top:0;margin-top:6px;}
+.section-num{background:var(--surface-2);border:1px solid var(--border);padding:2px 8px;border-radius:7px;font-family:var(--font-mono);font-size:.6rem;color:var(--text-dim);font-weight:600;}
+.step{padding:11px 13px;margin:9px 0;border-left:3px solid var(--border);background:#fafafa;border-radius:0 10px 10px 0;}
+.step.grounded{border-left-color:var(--grounded);background:#f0fdf4;}
+.step.extension{border-left-color:var(--extension);background:#fffbeb;}
+.step.speculative{border-left-color:var(--speculative);background:#fef2f2;}
+.step.question{border-left-color:var(--question);background:#eff6ff;}
+.step.learn{border-left-color:var(--learn);background:#f5f3ff;}
+.step-label{font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;font-weight:700;}
+.step.grounded .step-label{color:var(--grounded);}
+.step.extension .step-label{color:var(--extension);}
+.step.speculative .step-label{color:var(--speculative);}
+.step.question .step-label{color:var(--question);}
+.step.learn .step-label{color:var(--learn);}
+.step-body{font-size:.78rem;line-height:1.6;}
+.direct-answer{margin-top:22px;padding:16px 18px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #c7d2fe;border-radius:12px;}
+.direct-answer-label{font-size:.62rem;color:#1e40af;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:8px;}
 form{position:fixed;bottom:0;left:0;right:0;padding:10px 16px 16px;background:linear-gradient(to top,var(--bg) 55%,rgba(255,255,255,0));display:flex;flex-direction:column;align-items:center;gap:6px;z-index:20;pointer-events:none;}
 form > *{pointer-events:auto;}
 .input-toolbar{max-width:720px;width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;}
 .mode-hint{color:var(--text-faint);font-size:.62rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.input-wrap{max-width:720px;width:100%;display:flex;gap:6px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:6px 6px 6px 16px;transition:border-color .2s ease,box-shadow .2s;box-shadow:var(--shadow-md);}
+.input-wrap{max-width:720px;width:100%;display:flex;gap:6px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:6px 6px 6px 16px;transition:border-color .2s,box-shadow .2s;box-shadow:var(--shadow-md);}
 .input-wrap:focus-within{border-color:var(--border-hover);box-shadow:var(--shadow-lg),0 0 0 3px rgba(37,99,235,.06);}
 textarea#input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:.85rem;padding:7px 0;font-family:inherit;resize:none;max-height:160px;line-height:1.5;overflow-y:auto;}
 textarea#input::placeholder{color:var(--text-faint);}
@@ -123,29 +122,6 @@ button#send svg{width:14px;height:14px;}
 .suggestions{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;}
 .chip{background:var(--surface);border:1px solid var(--border);color:var(--text-dim);font-size:.72rem;padding:7px 11px;border-radius:16px;cursor:pointer;transition:all .15s ease;font-family:inherit;box-shadow:var(--shadow-sm);}
 .chip:hover{color:var(--text);border-color:var(--border-hover);background:var(--surface-2);transform:translateY(-1px);box-shadow:var(--shadow-md);}
-.explore-badge,.gedanken-badge{display:inline-flex;align-items:center;gap:5px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:.62rem;padding:3px 9px;border-radius:7px;margin-bottom:12px;font-weight:600;}
-.gedanken-badge{background:#eff6ff;border-color:#bfdbfe;color:#1e40af;}
-.cycle-header{color:var(--text-faint);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;margin:20px 0 10px;padding-top:12px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:8px;}
-.cycle-header:first-of-type{border-top:none;padding-top:0;margin-top:6px;}
-.cycle-num{background:var(--surface-2);border:1px solid var(--border);padding:2px 8px;border-radius:7px;font-family:var(--font-mono);font-size:.6rem;color:var(--text-dim);font-weight:600;}
-.step{padding:11px 13px;margin:9px 0;border-left:3px solid var(--border);background:#fafafa;border-radius:0 10px 10px 0;}
-.step.grounded{border-left-color:var(--grounded);background:#f0fdf4;}
-.step.extension{border-left-color:var(--extension);background:#fffbeb;}
-.step.speculative{border-left-color:var(--speculative);background:#fef2f2;}
-.step.question{border-left-color:var(--question);background:#eff6ff;}
-.step-label{font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;font-weight:700;display:flex;align-items:center;gap:5px;}
-.step.grounded .step-label{color:var(--grounded);}
-.step.extension .step-label{color:var(--extension);}
-.step.speculative .step-label{color:var(--speculative);}
-.step.question .step-label{color:var(--question);}
-.step-body{font-size:.78rem;line-height:1.6;}
-.where-stands{margin-top:20px;padding:14px 16px;background:#f9fafb;border:1px solid var(--border);border-radius:12px;}
-.where-stands-label{font-size:.62rem;color:var(--text-faint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;font-weight:700;}
-.stop-reason{margin-top:10px;font-size:.68rem;color:var(--text-dim);font-style:italic;padding-top:9px;border-top:1px solid var(--border);}
-.ged-section{margin:12px 0;padding-left:14px;border-left:3px solid #bfdbfe;}
-.ged-label{font-size:.66rem;color:var(--question);letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin-bottom:6px;}
-.ged-takeaway{margin-top:16px;padding:13px 15px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #c7d2fe;border-radius:10px;}
-.ged-takeaway-label{font-size:.62rem;color:#1e40af;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:6px;}
 .lib-panel{max-height:0;overflow:hidden;border-bottom:1px solid transparent;transition:max-height .35s ease,border-color .35s;background:var(--bg-subtle);}
 .lib-panel.open{max-height:340px;border-bottom-color:var(--border);}
 .lib-list{padding:12px 16px;display:grid;gap:3px;overflow-y:auto;max-height:320px;}
@@ -161,6 +137,7 @@ button#send svg{width:14px;height:14px;}
   form{padding:8px 10px 12px;}
   .input-toolbar,.input-wrap{max-width:100%;}
   .msg.user{max-width:88%;}
+  .fab{bottom:120px;right:14px;}
 }
 @media (min-width:769px){
   .sidebar-overlay{display:none !important;}
@@ -194,20 +171,16 @@ button#send svg{width:14px;height:14px;}
   </header>
 
   <div class="lib-panel" id="lib-panel"><div class="lib-list" id="lib-list"></div></div>
-
   <main id="chat"></main>
+
+  <button class="fab" id="fab-new-chat" title="New chat">＋</button>
 
   <form id="form" autocomplete="off">
     <div class="input-toolbar">
-      <div class="mode-tabs">
-        <button type="button" class="mode-tab active" data-mode="answer">Answer</button>
-        <button type="button" class="mode-tab" data-mode="explore">Explore</button>
-        <button type="button" class="mode-tab" data-mode="gedanken">Gedanken</button>
-      </div>
+      <span class="mode-hint" id="mode-hint">— reasoning across the books</span>
     </div>
-    <div class="input-toolbar"><span class="mode-hint" id="mode-hint">— concise grounded reply</span></div>
     <div class="input-wrap">
-      <textarea id="input" placeholder="Ask a physics question…" rows="1" required></textarea>
+      <textarea id="input" placeholder="Ask a physics or math question…" rows="1" required></textarea>
       <button id="send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg></button>
     </div>
     <div class="input-footer">Earick can make mistakes — verify important physics.</div>
@@ -215,17 +188,14 @@ button#send svg{width:14px;height:14px;}
 </div>
 <script>
 const $=id=>document.getElementById(id);
-const chat=$('chat'),input=$('input'),form=$('form'),sendBtn=$('send'),
-      chatList=$('chat-list'),chatTitle=$('chat-title'),
-      sidebar=$('sidebar'),sidebarOverlay=$('sidebar-overlay'),
-      sidebarToggle=$('sidebar-toggle'),
-      libToggle=$('lib-toggle'),libPanel=$('lib-panel'),libList=$('lib-list'),
-      libStatus=$('lib-status'),modeHint=$('mode-hint'),newChatBtn=$('new-chat-btn');
+const chat=$('chat'),input=$('input'),form=$('form'),sendBtn=$('send');
+const chatList=$('chat-list'),chatTitle=$('chat-title');
+const sidebar=$('sidebar'),sidebarOverlay=$('sidebar-overlay'),sidebarToggle=$('sidebar-toggle');
+const libToggle=$('lib-toggle'),libPanel=$('lib-panel'),libList=$('lib-list'),libStatus=$('lib-status');
+const modeHint=$('mode-hint'),newChatBtn=$('new-chat-btn'),fabNewChat=$('fab-new-chat');
 
-const MODE_HINTS={answer:'— concise grounded reply',explore:'— iterate: observe / analyse / adapt / upgrade / question',gedanken:'— a thought experiment that reveals the physics'};
-
-let state={chats:[],activeChatId:null,mode:'answer'};
-const STORE_KEY='earick.chats.v1';
+let state={chats:[],activeChatId:null};
+const STORE_KEY='earick.chats.v2';
 
 function loadState(){
   try{const raw=localStorage.getItem(STORE_KEY);if(raw){const p=JSON.parse(raw);if(p&&Array.isArray(p.chats)){state.chats=p.chats;state.activeChatId=p.activeChatId||null;}}}catch(e){}
@@ -237,11 +207,25 @@ function activeChat(){return state.chats.find(c=>c.id===state.activeChatId);}
 function createChat(){const id='c_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);const c={id,title:'New chat',createdAt:Date.now(),updatedAt:Date.now(),messages:[]};state.chats.unshift(c);state.activeChatId=id;saveState();return c;}
 function deleteChat(id){state.chats=state.chats.filter(c=>c.id!==id);if(state.activeChatId===id)state.activeChatId=state.chats[0]?.id||null;if(state.chats.length===0)createChat();saveState();}
 function setChatTitle(id,t){const c=state.chats.find(x=>x.id===id);if(!c)return;c.title=t.slice(0,60);c.updatedAt=Date.now();saveState();}
-function renderSidebar(){chatList.innerHTML='';const sorted=[...state.chats].sort((a,b)=>b.updatedAt-a.updatedAt);sorted.forEach(c=>{const item=document.createElement('div');item.className='chat-item'+(c.id===state.activeChatId?' active':'');item.innerHTML=`<div class="chat-item-content"><div class="chat-title">${escapeHtml(c.title||'New chat')}</div></div><button class="chat-del" title="Delete">✕</button>`;item.querySelector('.chat-item-content').addEventListener('click',()=>{state.activeChatId=c.id;saveState();renderSidebar();renderActiveChat();closeSidebar();});item.querySelector('.chat-del').addEventListener('click',ev=>{ev.stopPropagation();if(confirm('Delete this chat?')){deleteChat(c.id);renderSidebar();renderActiveChat();}});chatList.appendChild(item);});}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function scrollBottom(){window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});}
 function openSidebar(){sidebar.classList.add('open');sidebarOverlay.classList.add('open');}
 function closeSidebar(){sidebar.classList.remove('open');sidebarOverlay.classList.remove('open');}
+function updateFab(){const cur=activeChat();const empty=cur&&cur.messages.length===0;const scrolled=(window.scrollY>300);if(scrolled||empty)fabNewChat.classList.add('hidden');else fabNewChat.classList.remove('hidden');}
+window.addEventListener('scroll',updateFab,{passive:true});
+
+function renderSidebar(){
+  chatList.innerHTML='';
+  const sorted=[...state.chats].sort((a,b)=>b.updatedAt-a.updatedAt);
+  sorted.forEach(c=>{
+    const item=document.createElement('div');
+    item.className='chat-item'+(c.id===state.activeChatId?' active':'');
+    item.innerHTML=`<div class="chat-item-content"><div class="chat-title">${escapeHtml(c.title||'New chat')}</div></div><button class="chat-del" title="Delete">✕</button>`;
+    item.querySelector('.chat-item-content').addEventListener('click',()=>{state.activeChatId=c.id;saveState();renderSidebar();renderActiveChat();closeSidebar();updateFab();});
+    item.querySelector('.chat-del').addEventListener('click',ev=>{ev.stopPropagation();if(confirm('Delete this chat?')){deleteChat(c.id);renderSidebar();renderActiveChat();updateFab();}});
+    chatList.appendChild(item);
+  });
+}
 function renderMarkdown(t){
   let h=escapeHtml(t);
   h=h.replace(/^####\s+(.+)$/gm,'<h4>$1</h4>');
@@ -276,58 +260,44 @@ function renderSources(sources){
   }
   return `<div class="sources"><span class="sources-label">Sources</span>${chips.join('')}</div>`;
 }
-function renderExplore(reply){
-  const headerRe=/^=====\s*(CYCLE\s+\d+|WHERE THIS STANDS)\s*=====\s*$/gmi;
+function renderReasoning(reply){
+  const headerRe=/^=====\s*(STEP\s+\d+|DIRECT ANSWER)\s*=====\s*$/gmi;
   const headers=[];let m;
   while((m=headerRe.exec(reply))!==null){headers.push({label:m[1].trim(),start:m.index,end:headerRe.lastIndex});}
-  if(headers.length===0)return '<div class="explore-badge">🔬 Exploratory reasoning</div>'+renderMarkdown(reply);
-  const chunks=[];
-  for(let i=0;i<headers.length;i++){const h=headers[i];const bs=h.end;const be=(i+1<headers.length)?headers[i+1].start:reply.length;chunks.push({label:h.label,body:reply.slice(bs,be).trim()});}
-  let html='<div class="explore-badge">🔬 Exploratory reasoning</div>';
-  for(const c of chunks){
-    if(/^CYCLE/i.test(c.label)){html+=`<div class="cycle-header"><span class="cycle-num">${escapeHtml(c.label)}</span></div>`;html+=renderCycleBody(c.body);}
-    else if(/WHERE THIS STANDS/i.test(c.label)){html+='<div class="where-stands"><div class="where-stands-label">Where this stands</div>';html+=renderMarkdown(c.body.replace(/^Reasoning stopped:.*$/mi,'').trim());const sm=c.body.match(/^Reasoning stopped:\s*(.+)$/mi);if(sm)html+=`<div class="stop-reason">Reasoning stopped: ${escapeHtml(sm[1].trim())}</div>`;html+='</div>';}
+  if(headers.length===0)return '<div class="reasoning-header">🧠 Reasoned</div>'+renderMarkdown(reply);
+  const blocks=[];
+  for(let i=0;i<headers.length;i++){const h=headers[i];const s=h.end;const e=(i+1<headers.length)?headers[i+1].start:reply.length;blocks.push({label:h.label,body:reply.slice(s,e).trim()});}
+  let html='<div class="reasoning-header">🧠 Reasoned</div>';
+  for(const b of blocks){
+    if(/^STEP/i.test(b.label)){
+      html+=`<div class="section-label"><span class="section-num">${escapeHtml(b.label)}</span></div>`;
+      html+=renderStepBody(b.body);
+    }else if(/DIRECT ANSWER/i.test(b.label)){
+      html+=`<div class="direct-answer"><div class="direct-answer-label">Direct Answer</div>${renderMarkdown(b.body)}</div>`;
+    }
   }
   return html;
 }
-function renderCycleBody(body){
-  const markerPatterns=[
+function renderStepBody(body){
+  const patterns=[
     {re:/①\s*OBSERVE/gi,cls:'grounded',label:'① Observe'},
     {re:/②\s*ANALYSE/gi,cls:'grounded',label:'② Analyse'},
     {re:/③\s*ADAPT[^\n]*/gi,cls:'extension',label:'③ Adapt — extension'},
     {re:/④\s*UPGRADE[^\n]*/gi,cls:'speculative',label:'④ Upgrade — speculative'},
-    {re:/⑤\s*QUESTION/gi,cls:'question',label:'⑤ Question'}
+    {re:/⑤\s*QUESTION/gi,cls:'question',label:'⑤ Question'},
+    {re:/⑥\s*LEARN/gi,cls:'learn',label:'⑥ Learn'}
   ];
   const markers=[];
-  for(const mk of markerPatterns){mk.re.lastIndex=0;let m;while((m=mk.re.exec(body))!==null){markers.push({idx:m.index,end:m.index+m[0].length,cls:mk.cls,label:mk.label});}}
+  for(const p of patterns){p.re.lastIndex=0;let m;while((m=p.re.exec(body))!==null){markers.push({idx:m.index,end:m.index+m[0].length,cls:p.cls,label:p.label});}}
   markers.sort((a,b)=>a.idx-b.idx);
   if(markers.length===0)return `<div class="step"><div class="step-body">${renderMarkdown(body)}</div></div>`;
   let html='';
   for(let i=0;i<markers.length;i++){const s=markers[i].end;const e=(i+1<markers.length)?markers[i+1].idx:body.length;const sec=body.slice(s,e).trim();if(!sec)continue;html+=`<div class="step ${markers[i].cls}"><div class="step-label">${escapeHtml(markers[i].label)}</div><div class="step-body">${renderMarkdown(sec)}</div></div>`;}
   return html;
 }
-function renderGedanken(reply){
-  const sectionRe=/\*\*(Setup|The scenario|The tension|The resolution|The takeaway)\*\*/gi;
-  const marks=[];let m;
-  while((m=sectionRe.exec(reply))!==null){marks.push({label:m[1],start:m.index,end:sectionRe.lastIndex});}
-  if(marks.length===0)return '<div class="gedanken-badge">🎭 Thought experiment</div>'+renderMarkdown(reply);
-  let html='<div class="gedanken-badge">🎭 Thought experiment</div>';
-  const pre=reply.slice(0,marks[0].start).trim();if(pre)html+=renderMarkdown(pre);
-  for(let i=0;i<marks.length;i++){
-    const s=marks[i];
-    const body=(i+1<marks.length)?reply.slice(s.end,marks[i+1].start).trim():reply.slice(s.end).trim();
-    if(/takeaway/i.test(s.label))html+=`<div class="ged-takeaway"><div class="ged-takeaway-label">🎯 ${escapeHtml(s.label)}</div>${renderMarkdown(body)}</div>`;
-    else html+=`<div class="ged-section"><div class="ged-label">${escapeHtml(s.label)}</div>${renderMarkdown(body)}</div>`;
-  }
-  return html;
-}
-function buildBotMessage(content,mode,sources,index){
+function buildBotMessage(content,sources,index){
   const div=document.createElement('div');div.className='msg bot';
-  let bodyHtml;
-  if(mode==='explore')bodyHtml=renderExplore(content);
-  else if(mode==='gedanken')bodyHtml=renderGedanken(content);
-  else bodyHtml=renderMarkdown(content);
-  div.innerHTML=`<div class="bot-body">${bodyHtml}</div>`;
+  div.innerHTML=`<div class="bot-body">${renderReasoning(content)}</div>`;
   if(sources&&sources.length){const w=document.createElement('div');w.innerHTML=renderSources(sources);if(w.firstChild)div.appendChild(w.firstChild);}
   const actions=document.createElement('div');actions.className='action-row';
   actions.innerHTML=`<button class="action-btn" data-act="copy">📋 Copy</button><button class="action-btn" data-act="retry">↻ Retry</button>`;
@@ -340,49 +310,48 @@ function renderActiveChat(){
   const c=activeChat();chat.innerHTML='';
   if(!c)return;
   chatTitle.textContent=c.title||'New chat';
-  if(c.messages.length===0){chat.appendChild(welcomeBlock());return;}
-  c.messages.forEach((m,idx)=>{if(m.role==='user')chat.appendChild(buildUserMessage(m.content));else{const el=buildBotMessage(m.content,m.mode||'answer',m.sources,idx);chat.appendChild(el);renderMath(el);}});
-  scrollBottom();
+  if(c.messages.length===0){chat.appendChild(welcomeBlock());updateFab();return;}
+  c.messages.forEach((m,idx)=>{if(m.role==='user')chat.appendChild(buildUserMessage(m.content));else{const el=buildBotMessage(m.content,m.sources,idx);chat.appendChild(el);renderMath(el);}});
+  scrollBottom();updateFab();
 }
 function welcomeBlock(){
   const d=document.createElement('div');d.className='msg bot';
-  d.innerHTML=`<div class="bot-body"><h1>Good to see you.</h1><p>I'm <strong>Earick</strong>, a physics tutor grounded in the books.</p><p style="color:var(--text-dim);font-size:.8rem;margin-top:10px;"><strong>Answer</strong> — concise grounded reply<br><strong>Explore</strong> — iterative reasoning across the books<br><strong>Gedanken</strong> — a thought experiment that reveals the physics</p><div class="suggestions"><button class="chip" onclick="ask(this)">What is Newton's second law?</button><button class="chip" onclick="ask(this)">Why is entropy always increasing?</button><button class="chip" onclick="ask(this)">Does F = ma apply in string theory?</button><button class="chip" onclick="ask(this)">What happens if you drop a flashlight while running?</button></div></div>`;
+  d.innerHTML=`<div class="bot-body"><h1>Good to see you.</h1><p>I'm <strong>Earick</strong>, a physics and math tutor grounded in the books.</p><p style="color:var(--text-dim);font-size:.8rem;margin-top:10px;">Each answer reasons through the problem — <strong>observe · analyse · adapt · upgrade · question</strong> — then ends with a direct answer.</p><div class="suggestions"><button class="chip" onclick="ask(this)">What is Newton's second law?</button><button class="chip" onclick="ask(this)">Why is entropy always increasing?</button><button class="chip" onclick="ask(this)">Does F = ma apply in string theory?</button><button class="chip" onclick="ask(this)">What happens if you drop a flashlight while running?</button></div></div>`;
   return d;
 }
 function ask(el){input.value=el.textContent.trim();input.style.height='auto';submitMessage();}
 async function submitMessage(){
   const message=input.value.trim();if(!message)return;
-  const c=activeChat();const mode=state.mode;
+  const c=activeChat();
   if(c.messages.length===0)setChatTitle(c.id,message);
   c.messages.push({role:'user',content:message});saveState();
   if(chat.querySelector('.msg.bot')&&chat.children.length===1&&chat.querySelector('.suggestions')){chat.innerHTML='';}
   chat.appendChild(buildUserMessage(message));
   input.value='';input.style.height='auto';sendBtn.disabled=true;
   const thinking=document.createElement('div');thinking.className='msg bot typing';
-  thinking.innerHTML=`<span>${mode==='explore'?'Exploring':mode==='gedanken'?'Constructing':'Thinking'}</span><span class="typing-dots"><span></span><span></span><span></span></span>`;
-  chat.appendChild(thinking);scrollBottom();
+  thinking.innerHTML=`<span>Reasoning</span><span class="typing-dots"><span></span><span></span><span></span></span>`;
+  chat.appendChild(thinking);scrollBottom();updateFab();
   const history=c.messages.slice(0,-1).slice(-8).map(m=>({role:m.role,content:m.content}));
   try{
-    const res=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,mode,history})});
+    const res=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,mode:'reasoned',history})});
     const data=await res.json();thinking.remove();
-    c.messages.push({role:'assistant',content:data.reply||'(no reply)',mode:data.mode||mode,sources:data.sources||[]});
+    c.messages.push({role:'assistant',content:data.reply||'(no reply)',sources:data.sources||[]});
     c.updatedAt=Date.now();saveState();
-    const el=buildBotMessage(data.reply||'(no reply)',data.mode||mode,data.sources||[],c.messages.length-1);
-    chat.appendChild(el);renderMath(el);scrollBottom();renderSidebar();
-  }catch(err){thinking.remove();const e=buildBotMessage('⚠️ Error: '+err.message,'answer',[],null);chat.appendChild(e);scrollBottom();}
+    const el=buildBotMessage(data.reply||'(no reply)',data.sources||[],c.messages.length-1);
+    chat.appendChild(el);renderMath(el);scrollBottom();renderSidebar();updateFab();
+  }catch(err){thinking.remove();const e=buildBotMessage('⚠️ Error: '+err.message,[],null);chat.appendChild(e);scrollBottom();}
   finally{sendBtn.disabled=false;input.focus();}
 }
 form.addEventListener('submit',e=>{e.preventDefault();submitMessage();});
 input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,160)+'px';});
 input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submitMessage();}});
-document.querySelectorAll('.mode-tab').forEach(tab=>{tab.addEventListener('click',()=>{document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active');state.mode=tab.dataset.mode;modeHint.textContent=MODE_HINTS[state.mode]||'';});});
 sidebarToggle.addEventListener('click',openSidebar);
 sidebarOverlay.addEventListener('click',closeSidebar);
-newChatBtn.addEventListener('click',()=>{createChat();renderSidebar();renderActiveChat();closeSidebar();input.focus();});
-libToggle.addEventListener('click',()=>{const open=libPanel.classList.toggle('open');libToggle.classList.toggle('active',open);});
+newChatBtn.addEventListener('click',()=>{createChat();renderSidebar();renderActiveChat();closeSidebar();input.focus();updateFab();});
+fabNewChat.addEventListener('click',()=>{createChat();renderSidebar();renderActiveChat();input.focus();updateFab();});
+libToggle.addEventListener('click',()=>{const o=libPanel.classList.toggle('open');libToggle.classList.toggle('active',o);});
 document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();createChat();renderSidebar();renderActiveChat();input.focus();}});
-loadState();renderSidebar();renderActiveChat();
-modeHint.textContent=MODE_HINTS[state.mode||'answer']||'';
+loadState();renderSidebar();renderActiveChat();updateFab();
 fetch('/books').then(r=>r.json()).then(books=>{if(libStatus)libStatus.textContent='Knowledge base';libList.innerHTML=books.map(b=>`<div class="lib-item"><span>${escapeHtml(b.title)}</span></div>`).join('');}).catch(()=>{if(libStatus)libStatus.textContent='offline';});
 input.focus();
 </script>
