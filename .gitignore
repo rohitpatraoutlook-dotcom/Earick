@@ -277,3 +277,8 @@ data/books.json.local
 !data/index/
 !data/index/chunks_all.jsonl
 !data/index/index_all.json
+
+# --- Dream Mode files (must be tracked) ---
+!data/self_awareness.md
+!data/dream_log.md
+!data/dream_state.json
