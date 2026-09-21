@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Nucleus -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M54,54m-8,0a8,8 0,1 1,16 0a8,8 0,1 1,-16 0" />
+    <!-- Orbit 1 (horizontal ellipse) -->
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M30,54 C30,46 40,40 54,40 C68,40 78,46 78,54 C78,62 68,68 54,68 C40,68 30,62 30,54 Z" />
+    <!-- Orbit 2 (rotated) -->
+    <group android:rotation="60" android:pivotX="54" android:pivotY="54">
+        <path
+            android:strokeColor="#1A1A1A"
+            android:strokeWidth="2"
+            android:fillColor="#00000000"
+            android:pathData="M30,54 C30,46 40,40 54,40 C68,40 78,46 78,54 C78,62 68,68 54,68 C40,68 30,62 30,54 Z" />
+    </group>
+    <!-- Orbit 3 (rotated) -->
+    <group android:rotation="-60" android:pivotX="54" android:pivotY="54">
+        <path
+            android:strokeColor="#1A1A1A"
+            android:strokeWidth="2"
+            android:fillColor="#00000000"
+            android:pathData="M30,54 C30,46 40,40 54,40 C68,40 78,46 78,54 C78,62 68,68 54,68 C40,68 30,62 30,54 Z" />
+    </group>
+</vector>
