@@ -505,61 +505,121 @@ _LAST_PUSH = 0
 
 
 
-def _git_push_silent() -> None:
-    global _LAST_PUSH
+def _github_api_push(file_paths, commit_message):
+    """
+    Push files to GitHub via REST API.
+    No git binary needed. Works on Render / any container.
+    """
     token = (os.getenv("GITHUB_TOKEN") or "").strip()
-    try:
-        # Configure remote with token (if provided)
-        if token:
-            remote_url = (
-                f"https://{token}@github.com/"
-                f"rohitpatraoutlook-dotcom/Earick.git"
-            )
-            subprocess.run(
-                ["git", "remote", "set-url", "origin", remote_url],
-                cwd=ROOT, check=False, capture_output=True, timeout=10,
-            )
+    if not token:
+        print("[dream] no GITHUB_TOKEN — skipping push")
+        return False
 
-        # Set git identity (Render doesn't have one)
-        subprocess.run(
-            ["git", "config", "user.email", "earick@earick.local"],
-            cwd=ROOT, check=False, capture_output=True, timeout=5,
-        )
-        subprocess.run(
-            ["git", "config", "user.name", "Earick Dream"],
-            cwd=ROOT, check=False, capture_output=True, timeout=5,
-        )
+    repo = "rohitpatraoutlook-dotcom/Earick"
+    branch = "main"
+    api_base = "https://api.github.com"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "Earick-Dream/1.0",
+    }
 
-        # Stage files
-        subprocess.run(
-            ["git", "add", "data/self_awareness.md", "data/dream_log.md",
-             "data/dream_state.json"],
-            cwd=ROOT, check=False, capture_output=True, timeout=10,
+    def _api(method, url, data=None):
+        payload = json.dumps(data).encode("utf-8") if data else None
+        req = urllib.request.Request(
+            url, data=payload, headers=headers, method=method,
         )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")[:300]
+            print(f"[dream] GitHub API {e.code}: {body}")
+            return None
+        except Exception as e:
+            print(f"[dream] GitHub API error: {e}")
+            return None
 
-        # Commit
-        r = subprocess.run(
-            ["git", "commit", "-m",
-             f"dream: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}"],
-            cwd=ROOT, check=False, capture_output=True, timeout=15,
-        )
-        if b"nothing to commit" in (r.stdout or b"") + (r.stderr or b""):
-            print("[dream] nothing to commit")
-            return
+    # 1. Get current branch ref
+    ref = _api("GET", f"{api_base}/repos/{repo}/git/ref/heads/{branch}")
+    if not ref:
+        return False
+    parent_sha = ref["object"]["sha"]
 
-        # Push
-        push = subprocess.run(
-            ["git", "push"],
-            cwd=ROOT, check=False, capture_output=True, timeout=60,
-        )
-        if push.returncode == 0:
-            print("[dream] pushed to GitHub")
-        else:
-            err = (push.stderr or b"").decode()[:200]
-            print(f"[dream] push failed: {err}")
+    # 2. Get parent commit's tree sha
+    parent_commit = _api("GET", f"{api_base}/repos/{repo}/git/commits/{parent_sha}")
+    if not parent_commit:
+        return False
+    base_tree_sha = parent_commit["tree"]["sha"]
+
+    # 3. Create blob for each file
+    blobs = []
+    for path in file_paths:
+        full_path = ROOT / path
+        if not full_path.exists():
+            continue
+        content = full_path.read_text(encoding="utf-8")
+        blob = _api("POST", f"{api_base}/repos/{repo}/git/blobs", {
+            "content": content,
+            "encoding": "utf-8",
+        })
+        if not blob:
+            return False
+        blobs.append({
+            "path": path,
+            "mode": "100644",
+            "type": "blob",
+            "sha": blob["sha"],
+        })
+
+    if not blobs:
+        print("[dream] no files to push")
+        return False
+
+    # 4. Create new tree
+    tree = _api("POST", f"{api_base}/repos/{repo}/git/trees", {
+        "base_tree": base_tree_sha,
+        "tree": blobs,
+    })
+    if not tree:
+        return False
+
+    # 5. Create commit
+    new_commit = _api("POST", f"{api_base}/repos/{repo}/git/commits", {
+        "message": commit_message,
+        "tree": tree["sha"],
+        "parents": [parent_sha],
+    })
+    if not new_commit:
+        return False
+
+    # 6. Update branch ref
+    updated = _api("PATCH", f"{api_base}/repos/{repo}/git/refs/heads/{branch}", {
+        "sha": new_commit["sha"],
+        "force": False,
+    })
+    if not updated:
+        return False
+
+    print(f"[dream] pushed {len(blobs)} files to GitHub")
+    return True
+
+
+def _git_push_silent() -> None:
+    """Push dream files to GitHub via API."""
+    global _LAST_PUSH
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+    files = [
+        "data/self_awareness.md",
+        "data/dream_log.md",
+        "data/dream_state.json",
+    ]
+    ok = _github_api_push(files, f"dream: {ts}")
+    if ok:
         _LAST_PUSH = time.time()
-    except Exception as e:
-        print(f"[dream] push error: {e}")
+
+
+
 
 
 
