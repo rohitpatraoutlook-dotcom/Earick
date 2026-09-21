@@ -335,6 +335,24 @@ def dream_one():
         return jsonify({"error": str(e)}), 500
 
 
+
+@app.route("/dream-reset", methods=["POST", "GET"])
+def dream_reset():
+    """Clear dream state — fresh start. Safe to call multiple times."""
+    data_dir = ROOT / "data"
+    removed = []
+    for f in ["dream_state.json", "dream_log.md", "self_awareness.md",
+              "dream_auto.json", "lock_state.json"]:
+        p = data_dir / f
+        if p.exists():
+            try:
+                p.unlink()
+                removed.append(f)
+            except Exception as e:
+                print(f"[reset] failed to remove {f}: {e}")
+    return jsonify({"reset": True, "removed": removed})
+
+
 @app.route("/books")
 def books_list():
     return jsonify([{"book_id": bid, "title": b.meta.get("title", ""),

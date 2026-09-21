@@ -503,26 +503,65 @@ def _run_consolidation(state: dict) -> bool:
 _LAST_PUSH = 0
 
 
+
+
 def _git_push_silent() -> None:
     global _LAST_PUSH
+    token = (os.getenv("GITHUB_TOKEN") or "").strip()
     try:
+        # Configure remote with token (if provided)
+        if token:
+            remote_url = (
+                f"https://{token}@github.com/"
+                f"rohitpatraoutlook-dotcom/Earick.git"
+            )
+            subprocess.run(
+                ["git", "remote", "set-url", "origin", remote_url],
+                cwd=ROOT, check=False, capture_output=True, timeout=10,
+            )
+
+        # Set git identity (Render doesn't have one)
+        subprocess.run(
+            ["git", "config", "user.email", "earick@earick.local"],
+            cwd=ROOT, check=False, capture_output=True, timeout=5,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Earick Dream"],
+            cwd=ROOT, check=False, capture_output=True, timeout=5,
+        )
+
+        # Stage files
         subprocess.run(
             ["git", "add", "data/self_awareness.md", "data/dream_log.md",
              "data/dream_state.json"],
             cwd=ROOT, check=False, capture_output=True, timeout=10,
         )
+
+        # Commit
         r = subprocess.run(
             ["git", "commit", "-m",
              f"dream: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}"],
             cwd=ROOT, check=False, capture_output=True, timeout=15,
         )
         if b"nothing to commit" in (r.stdout or b"") + (r.stderr or b""):
+            print("[dream] nothing to commit")
             return
-        subprocess.run(["git", "push"],
-                       cwd=ROOT, check=False, capture_output=True, timeout=30)
+
+        # Push
+        push = subprocess.run(
+            ["git", "push"],
+            cwd=ROOT, check=False, capture_output=True, timeout=60,
+        )
+        if push.returncode == 0:
+            print("[dream] pushed to GitHub")
+        else:
+            err = (push.stderr or b"").decode()[:200]
+            print(f"[dream] push failed: {err}")
         _LAST_PUSH = time.time()
     except Exception as e:
-        print(f"[dream] push failed: {e}")
+        print(f"[dream] push error: {e}")
+
+
 
 
 def _run_one_iteration(force: bool = False) -> bool:
