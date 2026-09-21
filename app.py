@@ -1,13 +1,14 @@
 """
-Earick - Physics RAG chatbot
-Retrieval: local TF-IDF over chunks.jsonl
-Generation: Groq API via urllib (no external LLM SDK needed)
+Earick - Physics RAG chatbot (multi-book, synthesis-aware)
+Retrieval: multi-book TF-IDF with diversity constraints
+Generation: Groq API (openai/gpt-oss-120b)
 """
 
 import json
 import math
 import os
 import re
+import sys
 import urllib.request
 import urllib.error
 from pathlib import Path
@@ -15,22 +16,26 @@ from pathlib import Path
 from flask import Flask, jsonify, render_template, request
 from dotenv import load_dotenv
 
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+
+from earick import Library
+
 
 # ------------------------------------------------------------------
 # Config
 # ------------------------------------------------------------------
-ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
-
-CHUNKS_PATH = ROOT / "data" / "chunks" / "chunks.jsonl"
-INDEX_PATH = ROOT / "data" / "chunks" / "index.json"
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip()
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-TOP_K = 5
-MAX_CONTEXT_CHARS = 6000
+TOP_K = 6                 # chunks sent to the LLM
+MAX_PER_BOOK = 3          # at most this many chunks per book in the context
+ENSURE_MIN_BOOKS = 2      # try to include at least this many books
+MAX_PER_CHAPTER = 2       # at most this many chunks from any one section
+MAX_CONTEXT_CHARS = 7000  # room for cross-book synthesis
 
 
 app = Flask(
@@ -41,28 +46,18 @@ app = Flask(
 
 
 # ------------------------------------------------------------------
-# Load chunks + index at startup
+# Load multi-book library at startup
 # ------------------------------------------------------------------
-print("📖 Loading chunks...")
-CHUNKS_BY_ID = {}
-with CHUNKS_PATH.open(encoding="utf-8") as f:
-    for line in f:
-        line = line.strip()
-        if not line:
-            continue
-        rec = json.loads(line)
-        CHUNKS_BY_ID[rec["id"]] = rec
-print(f"   → {len(CHUNKS_BY_ID)} chunks loaded")
-
-print("📊 Loading TF-IDF index...")
-INDEX = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
-IDF = INDEX["idf"]
-DOCS = INDEX["docs"]
-N = INDEX["N"]
-print(f"   → {N} docs, {len(IDF)} vocab")
+print("📚 Loading Earick library...")
+LIBRARY = Library(ROOT)
+n_chunks, n_vocab = LIBRARY.load_index()
+print(f"   → {len(LIBRARY.books)} books registered")
+for bid, b in LIBRARY.books.items():
+    print(f"      · {bid:24s} {b.chunk_count():5d} chunks  {b.meta.get('title','')}")
+print(f"   → {n_chunks} total chunks, {n_vocab} vocab")
 
 if not GROQ_API_KEY or GROQ_API_KEY.startswith("gsk_PASTE"):
-    print("⚠️  GROQ_API_KEY missing/invalid in .env — chat will fail")
+    print("⚠️  GROQ_API_KEY missing/invalid in .env")
 
 
 # ------------------------------------------------------------------
@@ -86,17 +81,25 @@ SYNONYMS = {
     "wave": ["frequency", "wavelength", "optics"],
     "maxwell": ["electromagnetic", "faraday"],
     "carnot": ["thermodynamics", "entropy", "efficiency"],
+    "schwarzschild": ["black", "hole", "radius", "relativity", "metric"],
+    "black hole": ["event", "horizon", "schwarzschild", "singularity"],
+    "einstein field": ["relativity", "tensor", "metric", "curvature"],
+    "spacetime": ["metric", "curvature", "relativity", "manifold"],
+    "geodesic": ["curvature", "spacetime", "metric"],
+    "cosmology": ["universe", "expansion", "friedmann", "robertson"],
+    "string theory": ["string", "brane", "extra", "dimension", "supersymmetry"],
+    "quantum gravity": ["planck", "loop", "string", "graviton"],
 }
 
 
 TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9\-]{1,}")
 
 
-def tokenize(text: str) -> list:
+def tokenize(text):
     return TOKEN_RE.findall(text.lower())
 
 
-def expand_query_tokens(query: str) -> list:
+def expand_query_tokens(query):
     tokens = tokenize(query)
     q_lower = query.lower()
     for phrase, syns in SYNONYMS.items():
@@ -106,62 +109,63 @@ def expand_query_tokens(query: str) -> list:
 
 
 # ------------------------------------------------------------------
-# Retrieval
+# Retrieval (via Library, with diversity constraints)
 # ------------------------------------------------------------------
-def score_doc(doc_entry, query_tokens_set):
-    tf = doc_entry["tf"]
-    score = 0.0
-    matched = 0
-    for tok in query_tokens_set:
-        c = tf.get(tok, 0)
-        if c:
-            score += (1.0 + math.log(c)) * IDF.get(tok, 1.0)
-            matched += 1
-    if matched > 0:
-        score *= (1.0 + 0.1 * matched)
-    return score
-
-
-def retrieve(query: str, top_k: int = TOP_K):
+def retrieve(query):
     tokens = expand_query_tokens(query)
     if not tokens:
         return []
-    qset = set(tokens)
-    scored = []
-    for d in DOCS:
-        s = score_doc(d, qset)
-        if s > 0:
-            scored.append((s, d["id"]))
-    scored.sort(reverse=True)
+
+    hits = LIBRARY.search(
+        tokens,
+        top_k=TOP_K,
+        max_per_book=MAX_PER_BOOK,
+        ensure_min_books=ENSURE_MIN_BOOKS,
+        max_per_chapter=MAX_PER_CHAPTER,
+    )
 
     results = []
-    for s, cid in scored[:top_k]:
-        rec = CHUNKS_BY_ID.get(cid)
-        if rec:
-            results.append({
-                "id": rec["id"],
-                "text": rec["text"],
-                "pages": f"{rec['page_start']}-{rec['page_end']}",
-                "chapter": rec.get("chapter", ""),
-                "score": round(s, 3),
-            })
+    for score, cid in hits:
+        rec = LIBRARY.chunks.get(cid)
+        if not rec:
+            continue
+        book = LIBRARY.books.get(rec["book_id"])
+        book_title = book.meta.get("title", rec["book_id"]) if book else rec["book_id"]
+        book_author = book.meta.get("author", "") if book else ""
+        results.append({
+            "id": rec["id"],
+            "text": rec["text"],
+            "pages": f"{rec['page_start']}-{rec['page_end']}",
+            "chapter": rec.get("chapter", ""),
+            "book_id": rec["book_id"],
+            "book_title": book_title,
+            "book_author": book_author,
+            "score": round(score, 3),
+        })
     return results
 
 
 # ------------------------------------------------------------------
-# Prompt + Groq call
+# Prompt + Groq
 # ------------------------------------------------------------------
-SYSTEM_PROMPT = """You are Earick, a concise physics tutor.
+SYSTEM_PROMPT = """You are Earick, a physics tutor with access to multiple textbooks:
+- University Physics (Young & Freedman) — introductory level
+- General Relativity (Hobson, Efstathiou & Lasenby) — advanced
+- String Theory notes — graduate level
+
+Your goal is to help students UNDERSTAND, not just look things up.
 
 Rules:
-- Answer ONLY using the provided physics context from the textbook.
-- If the context is insufficient or the question is not physics-related, reply in one short sentence ("That's outside my physics scope." or "I couldn't find that in the textbook.") and stop.
-- Show the key formula(s) FIRST, then explain in 3-5 sentences.
-- Equations may appear garbled in the context (PDF extraction artifacts). Reconstruct them into clean LaTeX when possible: use \\( ... \\) for inline math and \\[ ... \\] for display math.
-- NEVER cite pages inline. Do NOT write "Source:", "[pages X]", or anything similar in the body.
-- Page citations are added separately by the app. Just answer.
-- Never invent numerical constants.
-- Keep answers under 150 words unless the user asks for depth.
+1. Use the provided context as your PRIMARY source. Do not invent facts not present.
+2. DO combine information across multiple passages and books. If one chunk gives a formula and another explains its meaning, merge them into one coherent answer.
+3. DO reason: compare approaches, contrast intro vs. advanced perspectives, connect related concepts.
+4. If the context covers only part of the question, answer that part confidently, then note what's missing.
+5. If the question is off-topic (not physics), reply in one short sentence and stop.
+6. Show the key formula(s) FIRST, then explain in 3-6 sentences.
+7. Equations may be garbled in the source (PDF artifacts). Reconstruct them into clean LaTeX: \\( ... \\) inline, \\[ ... \\] display.
+8. NEVER cite pages inline. Page citations are added separately.
+9. Never invent numerical constants — use only values from context, or omit them.
+10. Aim for clarity over completeness. A short precise answer beats a long vague one.
 """
 
 
@@ -171,7 +175,8 @@ def build_context(hits):
     blocks = []
     total = 0
     for i, h in enumerate(hits, 1):
-        block = f"[{i}] (pages {h['pages']}, {h['chapter']})\n{h['text']}"
+        block = (f"[{i}] ({h['book_title']}, pages {h['pages']}, {h['chapter']})\n"
+                 f"{h['text']}")
         if total + len(block) > MAX_CONTEXT_CHARS:
             break
         blocks.append(block)
@@ -179,18 +184,18 @@ def build_context(hits):
     return "\n\n".join(blocks)
 
 
-def call_groq(user_query: str, hits):
+def call_groq(user_query, hits):
     if not GROQ_API_KEY or GROQ_API_KEY.startswith("gsk_PASTE"):
         return "⚠️ Groq API key missing. Add GROQ_API_KEY to .env and restart."
 
     context = build_context(hits)
     user_prompt = (
-        "Physics context from the textbook:\n"
+        "Physics context from the textbooks:\n"
         "-----\n"
         f"{context}\n"
         "-----\n\n"
         f"Student question: {user_query}\n\n"
-        "Answer as Earick:"
+        "Answer as Earick (combine ideas across passages where useful):"
     )
 
     payload = {
@@ -199,8 +204,8 @@ def call_groq(user_query: str, hits):
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ],
-        "temperature": 0.3,
-        "max_tokens": 700,
+        "temperature": 0.4,
+        "max_tokens": 800,
     }
 
     req = urllib.request.Request(
@@ -242,12 +247,20 @@ def chat():
     if not message:
         return jsonify({"reply": "Please type a physics question."}), 400
 
-    hits = retrieve(message, top_k=TOP_K)
+    hits = retrieve(message)
     reply = call_groq(message, hits)
+
     return jsonify({
         "reply": reply,
         "sources": [
-            {"topic": h["chapter"], "pages": h["pages"], "score": h["score"]}
+            {
+                "topic": h["chapter"],
+                "pages": h["pages"],
+                "book_title": h["book_title"],
+                "book_author": h["book_author"],
+                "book_id": h["book_id"],
+                "score": h["score"],
+            }
             for h in hits
         ],
     })
@@ -257,12 +270,31 @@ def chat():
 def health():
     return jsonify({
         "status": "ok",
-        "chunks": len(CHUNKS_BY_ID),
-        "vocab": len(IDF),
+        "books": len(LIBRARY.books),
+        "chunks": len(LIBRARY.chunks),
+        "vocab": len(LIBRARY.idf),
         "model": GROQ_MODEL,
         "groq_configured": bool(GROQ_API_KEY) and not GROQ_API_KEY.startswith("gsk_PASTE"),
     })
 
 
+@app.route("/books")
+def books_list():
+    """Return the book catalog as JSON (used by the UI header)."""
+    return jsonify([
+        {
+            "book_id": bid,
+            "title": b.meta.get("title", ""),
+            "author": b.meta.get("author", ""),
+            "edition": b.meta.get("edition", ""),
+            "year": b.meta.get("year", 0),
+            "level": b.meta.get("level", ""),
+            "subjects": b.meta.get("subjects", []),
+            "chunks": b.chunk_count(),
+        }
+        for bid, b in LIBRARY.books.items()
+    ])
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)

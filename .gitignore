@@ -264,3 +264,13 @@ data/chunks/index.json
 data/progress.json
 *.pyc
 __pycache__/
+
+# --- Multi-book layout (never commit) ---
+data/books/*/source.pdf
+data/books/*/*.pdf
+data/books/*/raw/
+data/books/*/clean/
+data/books/*/chunks/
+data/books/*/progress.json
+data/index/
+data/books.json.local

@@ -20,11 +20,8 @@
     --text:         #ededed;
     --text-dim:     #8a8a8a;
     --text-faint:   #5c5c5c;
-    --accent:       #ededed;
     --user-bg:      #1a1a1a;
     --bot-bg:       #0d0d0d;
-    --radius:       12px;
-    --radius-lg:    20px;
     --font:         -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
     --mono:         ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
   }
@@ -39,7 +36,6 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* ---------- Header ---------- */
   header {
     padding: 14px 20px;
     border-bottom: 1px solid var(--border);
@@ -57,8 +53,8 @@
   }
   header h1 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
   header p { font-size: 0.72rem; color: var(--text-faint); margin-top: 1px; }
+  #book-count { color: var(--text-dim); }
 
-  /* ---------- Chat area ---------- */
   main {
     flex: 1; max-width: 780px; width: 100%;
     margin: 0 auto; padding: 24px 16px 140px;
@@ -67,7 +63,7 @@
   .msg {
     max-width: 88%;
     padding: 14px 18px;
-    border-radius: var(--radius-lg);
+    border-radius: 20px;
     line-height: 1.65;
     font-size: 0.94rem;
     word-wrap: break-word;
@@ -91,8 +87,6 @@
     border-bottom-left-radius: 6px;
     max-width: 92%;
   }
-
-  /* ---------- Content inside messages ---------- */
   .msg.bot strong { color: #ffffff; font-weight: 600; }
   .msg.bot em { color: var(--text-dim); font-style: italic; }
   .msg.bot code {
@@ -116,20 +110,10 @@
     color: #cfcfcf;
   }
   .msg.bot pre code { background: none; border: none; padding: 0; }
-  .msg.bot h1, .msg.bot h2, .msg.bot h3 {
-    color: #ffffff;
-    font-size: 0.98rem;
-    font-weight: 600;
-    margin: 12px 0 6px;
-  }
-  .msg.bot ul, .msg.bot ol { margin: 6px 0 6px 20px; }
-  .msg.bot li { margin: 3px 0; }
 
-  /* ---------- KaTeX ---------- */
   .katex-display { margin: 12px 0 !important; overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
   .katex { font-size: 1.02em !important; }
 
-  /* ---------- Sources ---------- */
   .sources {
     margin-top: 14px;
     padding-top: 10px;
@@ -163,12 +147,7 @@
     white-space: nowrap;
   }
 
-  /* ---------- Typing indicator ---------- */
-  .typing {
-    color: var(--text-dim);
-    font-style: italic;
-    font-size: 0.88rem;
-  }
+  .typing { color: var(--text-dim); font-style: italic; font-size: 0.88rem; }
   .typing::after {
     content: '';
     display: inline-block;
@@ -181,10 +160,7 @@
     80%, 100% { content: '...'; }
   }
 
-  /* ---------- Suggestions (welcome) ---------- */
-  .suggestions {
-    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px;
-  }
+  .suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .chip {
     background: var(--surface-2);
     border: 1px solid var(--border);
@@ -203,7 +179,6 @@
   }
   .chip:active { transform: scale(0.97); }
 
-  /* ---------- Input bar ---------- */
   form {
     position: fixed; bottom: 0; left: 0; right: 0;
     padding: 14px 16px 20px;
@@ -242,7 +217,6 @@
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
     transition: opacity 0.15s ease, transform 0.1s ease;
-    font-family: inherit;
     flex-shrink: 0;
   }
   button#send:hover:not(:disabled) { opacity: 0.85; }
@@ -250,7 +224,6 @@
   button#send:disabled { opacity: 0.35; cursor: not-allowed; }
   button#send svg { width: 16px; height: 16px; }
 
-  /* ---------- Scrollbar (subtle) ---------- */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -263,21 +236,22 @@
   <div class="logo">⚛️</div>
   <div>
     <h1>Earick</h1>
-    <p>Physics RAG · Young &amp; Freedman</p>
+    <p>Physics RAG · <span id="book-count">loading library…</span></p>
   </div>
 </header>
 
 <main id="chat">
   <div class="msg bot">
-    👋 I'm <strong>Earick</strong>, a physics tutor grounded in <em>University Physics</em>.<br><br>
-    Ask me about mechanics, thermodynamics, E&amp;M, waves, optics, relativity, quantum, or nuclear physics.
+    👋 I'm <strong>Earick</strong>, a physics tutor grounded in <em>University Physics</em> and <em>General Relativity</em>.<br><br>
+    Ask me about mechanics, thermodynamics, E&amp;M, waves, optics, relativity, quantum, nuclear, or gravity.
     <div class="suggestions">
       <button class="chip" onclick="ask(this)">What is Newton's second law?</button>
       <button class="chip" onclick="ask(this)">Explain time dilation</button>
       <button class="chip" onclick="ask(this)">State the Schrödinger equation</button>
       <button class="chip" onclick="ask(this)">What is entropy?</button>
-      <button class="chip" onclick="ask(this)">Explain the ideal gas law</button>
-      <button class="chip" onclick="ask(this)">What is electric potential?</button>
+      <button class="chip" onclick="ask(this)">Explain the Einstein field equations</button>
+      <button class="chip" onclick="ask(this)">Describe the Schwarzschild metric</button>
+      <button class="chip" onclick="ask(this)">What is gravitational lensing?</button>
     </div>
   </div>
 </main>
@@ -299,6 +273,7 @@
   const input   = document.getElementById('input');
   const sendBtn = document.getElementById('send');
   const chat    = document.getElementById('chat');
+  const bookCount = document.getElementById('book-count');
 
   function scrollBottom() {
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
@@ -310,7 +285,6 @@
     }[c]));
   }
 
-  // Lightweight markdown: bold, italic, inline code, line breaks
   function renderMarkdown(text) {
     let h = escapeHtml(text);
     h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -319,7 +293,6 @@
     return h;
   }
 
-  // Render math in an element via KaTeX auto-render
   function renderMath(el) {
     if (typeof renderMathInElement !== 'function') return;
     try {
@@ -333,37 +306,45 @@
         throwOnError: false,
         ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
       });
-    } catch (e) {
-      console.warn('KaTeX render failed:', e);
-    }
+    } catch (e) { console.warn('KaTeX:', e); }
   }
 
-  // Merge adjacent page ranges and build source chips
   function formatSources(sources) {
-    const parsed = sources
-      .map(s => {
-        const m = String(s.pages || '').match(/(\d+)-(\d+)/);
-        return m ? { a: +m[1], b: +m[2], topic: s.topic || '' } : null;
-      })
-      .filter(Boolean)
-      .sort((x, y) => x.a - y.a);
-
-    const merged = [];
-    for (const r of parsed) {
-      const last = merged[merged.length - 1];
-      if (last && r.a <= last.b + 1) {
-        last.b = Math.max(last.b, r.b);
-        if (!last.topic && r.topic) last.topic = r.topic;
-      } else {
-        merged.push({ a: r.a, b: r.b, topic: r.topic });
+    // Group by book, then merge adjacent page ranges within each book
+    const byBook = {};
+    sources.forEach(s => {
+      const key = s.book_id || 'unknown';
+      if (!byBook[key]) {
+        byBook[key] = { title: s.book_title || key, ranges: [] };
       }
-    }
+      const m = String(s.pages || '').match(/(\d+)-(\d+)/);
+      if (m) byBook[key].ranges.push([+m[1], +m[2]]);
+    });
 
-    return merged.map(({ a, b, topic }) => {
-      const pageStr = (a === b) ? `p.${a}` : `pp.${a}–${b}`;
-      const label = topic ? `${topic.slice(0, 42)} · ${pageStr}` : pageStr;
-      return `<span title="${escapeHtml(topic)} · ${pageStr}">${escapeHtml(label)}</span>`;
-    }).join('');
+    const chips = [];
+    for (const key of Object.keys(byBook)) {
+      const group = byBook[key];
+      group.ranges.sort((a, b) => a[0] - b[0]);
+      const merged = [];
+      for (const r of group.ranges) {
+        const last = merged[merged.length - 1];
+        if (last && r[0] <= last[1] + 1) {
+          last[1] = Math.max(last[1], r[1]);
+        } else {
+          merged.push([r[0], r[1]]);
+        }
+      }
+      const pageStr = merged.map(pair => {
+        const a = pair[0], b = pair[1];
+        return a === b ? 'p.' + a : 'pp.' + a + '\u2013' + b;
+      }).join(', ');
+      const shortTitle = group.title.length > 38
+        ? group.title.slice(0, 36) + '…'
+        : group.title;
+      const fullTitle = escapeHtml(group.title) + ' · ' + pageStr;
+      chips.push('<span title="' + fullTitle + '">' + escapeHtml(shortTitle) + ' · ' + pageStr + '</span>');
+    }
+    return chips.join('');
   }
 
   function addMessage(text, who, sources) {
@@ -419,6 +400,14 @@
       sendBtn.disabled = false;
       input.focus();
     }
+  });
+
+  // Fetch book count on load
+  fetch('/books').then(r => r.json()).then(books => {
+    const total = books.reduce((sum, b) => sum + b.chunks, 0);
+    bookCount.textContent = books.length + ' books · ' + total.toLocaleString() + ' chunks';
+  }).catch(() => {
+    bookCount.textContent = 'library unavailable';
   });
 
   input.focus();
