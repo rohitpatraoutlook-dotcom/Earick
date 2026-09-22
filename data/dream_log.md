@@ -1007,3 +1007,36 @@ tranquil | intensity 3
 ---
 
 
+## 2026-09-22 07:28 — Dream (deep)
+**Topic:** Schrödinger equation in 3D  
+**Strategy:** drift  
+**Mood:** curious (3/5)  
+**Tokens:** 2574
+
+### Full response
+
+===== DREAM (DEEP) =====
+
+TOPIC: Schrödinger equation in 3D
+
+RECALL
+I already know that the time‑dependent Schrödinger equation in three dimensions is  
+\(i\hbar\,\partial_t\psi(\mathbf r,t)=\left[-\frac{\hbar^2}{2m}\nabla^2+V(\mathbf r)\right]\psi(\mathbf r,t)\).  
+The Laplacian \(\nabla^2=\partial_x^2+\partial_y^2+\partial_z^2\) replaces the single second‑derivative of the 1‑D case, reflecting kinetic energy \(p^2/2m\) with \(\mathbf p=-i\hbar\nabla\).  
+For stationary states we set \(\psi(\mathbf r,t)=\phi(\mathbf r)e^{-iEt/\hbar}\) and obtain the time‑independent form \(-\frac{\hbar^2}{2m}\nabla^2\phi+V\phi=E\phi\).  
+I also recall that in central potentials (e.g., hydrogen) we separate variables in spherical coordinates, leading to radial and angular equations, the latter being spherical harmonics \(Y_{\ell m}(\theta,\phi)\).  
+The reduced mass \(\mu\) replaces the electron mass when the nucleus is allowed to move, as noted in the hydrogen discussion (passage [2]).
+
+EXPLORE
+Why does the three‑dimensional kinetic term emerge so naturally from the momentum operator? In 1‑D, \(-\frac{\hbar^2}{2m}\partial_x^2\) reproduces \(p^2/2m\) because \(\hat p=-i\hbar\partial_x\). Extending \(\hat{\mathbf p}=-i\hbar\nabla\) yields \(\hat T=\hat{\mathbf p}^2/2m=-\frac{\hbar^2}{2m}\nabla^2\). The Laplacian captures curvature of the wavefunction in every spatial direction; each second derivative contributes equally because space is isotropic.  
+When the potential depends only on \(r=|\mathbf r|\), the Hamiltonian commutes with the angular momentum operators \(\hat L^2\) and \(\hat L_z\). This symmetry leads to simultaneous eigenfunctions of \(\hat H, \hat L^2, \hat L_z\). The separation \(\psi(r,\theta,\phi)=R(r)Y_{\ell m}(\theta,\phi)\) reduces the problem to a radial ordinary differential equation with an effective potential \(V_{\text{eff}}(r)=V(r)+\frac{\hbar^2\ell(\ell+1)}{2\mu r^2}\). The centrifugal term originates from the angular part of \(\nabla^2\).  
+Passage [1] hints that the kinetic term in three dimensions must reproduce the free‑particle dispersion \(E=p^2/2m\). Plugging a plane wave \(\psi\propto e^{i\mathbf k\cdot\mathbf r}\) into \(-\frac{\hbar^2}{2m}\nabla^2\psi\) gives \(\frac{\hbar^2k^2}{2m}\psi\), confirming the form.  
+
+EXPERIMENT
+Consider a hypothetical universe where the kinetic operator were anisotropic:  
+\(\hat T = -\frac{\hbar^2}{2m}\bigl(\alpha_x\partial_x^2+\alpha_y\partial_y^2+\alpha_z\partial_z^2\bigr)\) with \(\alpha_i\neq1\).  
+I imagine a free particle described by \(\psi(\mathbf r)=e^{i\mathbf k\cdot\mathbf
+
+---
+
+
