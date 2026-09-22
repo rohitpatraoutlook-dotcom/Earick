@@ -282,3 +282,4 @@ data/books.json.local
 !data/self_awareness.md
 !data/dream_log.md
 !data/dream_state.json
+templates/*.bak
