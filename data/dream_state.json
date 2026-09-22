@@ -1,12 +1,12 @@
 {
-  "day": "2026-09-21",
-  "iter_today": 4,
-  "iter_this_hour": 4,
-  "hour_key": "2026-09-21-23",
-  "tokens_today": 9706,
-  "iters_since_push": 4,
-  "total_dreams": 4,
-  "dreams_since_consolidation": 4,
+  "day": "2026-09-22",
+  "iter_today": 1,
+  "iter_this_hour": 1,
+  "hour_key": "2026-09-22-00",
+  "tokens_today": 2499,
+  "iters_since_push": 5,
+  "total_dreams": 5,
+  "dreams_since_consolidation": 5,
   "current_mood": "curious",
   "mood_history": [
     {
@@ -26,6 +26,11 @@
     },
     {
       "ts": "2026-09-21",
+      "mood": "curious",
+      "intensity": 3
+    },
+    {
+      "ts": "2026-09-22",
       "mood": "curious",
       "intensity": 3
     }

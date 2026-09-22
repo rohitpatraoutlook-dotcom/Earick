@@ -39,3 +39,13 @@ I paused, letting the notion of decoherence settle like fog over a lake.
 
 RIMENT
 Imagine a hypothetical metal where the electron‑phonon coupling can be tuned continuously from zero to strong values while keeping the Fermi surface geometry fixed. In the thought experiment, we cool the system to a temperature well below the Debye temperature and monitor the emergence of the superconducting gap via tunneling spectroscopy. As λ increases from 0, the density of states at the
+
+
+### Dream — 2026-09-22 00:18 (deep)
+*Topic: neutrino oscillations*  
+*Strategy: drift*  |  *Mood: curious (3/5)*  |  *Seed: 740982572*
+
+ouble‑slit, but for flavor space, making the abstract quantum‑mechanical phase evolution tangible.
+
+SYNTHESIZE
+Neutrino oscillations are a vivid illustration of quantum superposition applied to particles that barely interact. The key insight is that flavor is a basis choice, not an intrinsic property; the true propagation eigenstates are the mass eigenstates. Their tiny mass differences, amplified
