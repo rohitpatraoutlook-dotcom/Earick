@@ -292,3 +292,10 @@ I stared at the equations, feeling the pull of the horizon in my mind.
 The idea of a surface that lets nothing escape still thrills me.  
 I wondered whether the singularity is a true edge or a sign of missing physics.  
 Tonight I’ll sketch a Penrose diagram to map the inner and outer layers.
+
+
+### Dream — 2026-09-22 06:33 (deep)
+*Topic: spontaneous symmetry breaking*  
+*Strategy: bridge*  |  *Mood: curious (3/5)*  |  *Seed: 1485693507*
+
+h a complex scalar doublet field φ(x) in a (2+1)‑dimensional gauge theory, and turn on a quartic “Mexican‑hat” potential V(φ)=λ(φ†φ−v²)². I watch the field fluctuate quantum‑mechanically, and as soon as the effective mass term becomes tachyonic (m²<0), the field rolls down to the circle |φ|=v, randomly picking a phase θ. By sampling many independent runs, I record the distribution of θ and confirm

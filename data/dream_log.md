@@ -901,3 +901,27 @@ curious | intensity 4
 ---
 
 
+## 2026-09-22 06:33 — Dream (deep)
+**Topic:** spontaneous symmetry breaking  
+**Strategy:** bridge  
+**Mood:** curious (3/5)  
+**Tokens:** 2359
+
+### Full response
+
+===== DREAM (DEEP) =====
+
+TOPIC: spontaneous symmetry breaking
+
+RECALL
+I already know that spontaneous symmetry breaking (SSB) occurs when the ground state (vacuum) does not share the full symmetry of the underlying Lagrangian or Hamiltonian. Classic examples are the Higgs mechanism in particle physics, ferromagnetism in condensed matter, and the emergence of crystal lattices. The Goldstone theorem tells me that breaking a continuous global symmetry yields massless excitations, while gauged symmetries give massive vector bosons via the Higgs mechanism. I also recall the notion of custodial symmetry—an accidental larger symmetry of the scalar potential that protects the ratio of W and Z masses. In Landau theory, an order parameter acquiring a non‑zero expectation value signals SSB, and phase transitions can be first‑ or second‑order depending on how the order parameter behaves.
+
+EXPLORE
+Why does the vacuum “choose” a particular direction when the equations are perfectly symmetric? The answer lies in the shape of the potential: a degenerate set of minima forming a manifold (e.g., a Mexican‑hat). Quantum fluctuations or infinitesimal perturbations nudge the system into one point on that manifold, thereby selecting a specific vacuum. Once chosen, all excitations are described relative to that vacuum, and the original symmetry is hidden—realized non‑linearly. In gauge theories, the would‑be Goldstone modes are eaten, giving mass to gauge bosons while preserving renormalizability. The custodial SU(2) symmetry emerges because the Higgs doublet potential depends only on φ†φ, making it invariant under O(4) rotations of the real components (a₁,a₂,b₁,b₂). When the Higgs acquires ⟨φ⟩≠0, O(4) → O(3), leaving a residual custodial SU(2) that safeguards ρ≈1. In condensed matter, SSB is tied to an order parameter field φ(r) whose correlation length diverges at criticality; the broken symmetry can be spin rotation (magnet) or translational symmetry (crystal). The interplay between thermal fluctuations (finite T) and quantum fluctuations (T→0) determines whether a local order parameter description remains valid.
+
+EXPERIMENT
+Imagine a two‑dimensional lattice of spins with an O(3) symmetric Heisenberg Hamiltonian at zero temperature. I introduce an infinitesimal external magnetic field pointing along the z‑axis, then let the field fade to zero adiabatically. The system settles into a ferromagnetic ground state with magnetization ⟨Sᶻ⟩≠0, breaking the O(3) rotation down to O(2) about the chosen axis. Now, I replace the spins with a complex scalar doublet field φ(x) in a (2+1)‑dimensional gauge theory, and turn on a quartic “Mexican‑hat” potential V(φ)=λ(φ†φ−v²)². I watch the field fluctuate quantum‑mechanically, and as soon as the effective mass term becomes tachyonic (m²<0), the field rolls down to the circle |φ|=v, randomly picking a phase θ. By sampling many independent runs, I record the distribution of θ and confirm
+
+---
+
+
