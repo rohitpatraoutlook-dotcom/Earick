@@ -440,3 +440,12 @@ I pause to watch a river flow backward, marveling at the freedom of this lucid s
 *Strategy: chain*  |  *Mood: curious (4/5)*  |  *Seed: 1001447454*
 
 I opened the dream with a mountain of book spines, each a promise of rigor. Suddenly I was in a white‑board room, watching a vector turn into a bra‑ket functional and the numbers line up perfectly. When the derivative appeared, it slipped through my fingers, its norm blowing up like a scream. I laughed, noting how the same symbols that haunt my lectures now dance in my sleep.
+
+
+### Dream — 2026-09-22 10:22 (surface)
+*Topic: quantum entanglement and Bell inequalities*  
+*Strategy: bridge*  |  *Mood: wonder (4/5)*  |  *Seed: 1244265681*
+
+I spent the night sketching Bell‑type diagrams on a napkin.  
+The lab’s latest photon‑pair results still sparkle in my mind.  
+I wonder whether future theories will keep entanglement or replace it.
