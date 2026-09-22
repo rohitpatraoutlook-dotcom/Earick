@@ -725,3 +725,35 @@ curious | intensity 4
 ---
 
 
+## 2026-09-22 05:06 — Dream (deep)
+**Topic:** numerical methods for ODEs and PDEs  
+**Strategy:** random  
+**Mood:** curious (3/5)  
+**Tokens:** 2248
+
+### Full response
+
+===== DREAM (DEEP) =====
+
+TOPIC: numerical methods for ODEs and PDEs
+
+RECALL
+I remember the classic toolbox for ordinary differential equations: explicit Euler, the family of Runge‑Kutta methods, multistep schemes such as Adams‑Bashforth and Adams‑Moulton, and the stiff‑friendly backward differentiation formulas (BDF). Their analysis rests on concepts of local truncation error, order conditions, and linear stability (the Dahlquist test equation). For partial differential equations the picture widens: finite differences approximate derivatives on structured grids, finite elements turn the strong form into a weak variational problem, finite volumes enforce conservation on control volumes, and spectral methods expand the solution in global basis functions. I also recall the notion of a characteristic hypersurface from the PDE theory: a surface on which the highest‑order normal derivative cannot be recovered from the Cauchy data, making the Cauchy problem ill‑posed there (Passage [1],[2]). In CFD, discretization error, grid quality, and scheme stability dominate the accuracy discussion (Passage [4]).
+
+EXPLORE
+Why do ODE methods translate so cleanly to the method‑of‑lines (MOL) for PDEs, yet the presence of characteristics can still wreck a naïve discretization? In an ODE the “direction of propagation” is unique—time—so any stable time integrator marches forward. In a PDE, especially hyperbolic ones, information travels along characteristic curves; if a numerical stencil crosses a characteristic surface that is also a physical discontinuity (e.g., a shock), the scheme may introduce non‑physical oscillations or even become unstable. This explains the difference highlighted in the passages: ODEs have a universal characteristic (a point), while PDEs have a manifold of possible characteristic hypersurfaces. 
+
+Finite difference schemes (centered, upwind) embed a bias that aligns with the sign of the convective velocity, essentially mimicking the direction of the characteristic. Implicit schemes, while unconditionally stable for diffusion‑dominated problems, may smear characteristics unless the spatial discretization respects them. Finite element methods, through the weak form, can incorporate upwinding via streamline‑diffusion or discontinuous Galerkin formulations, thereby controlling spurious modes along characteristics.
+
+I also note that discretization error is not uniform across the domain: near a characteristic surface the error constant can blow up because the underlying PDE loses ellipticity. Thus mesh refinement alone may not guarantee convergence unless the scheme is characteristic‑aware.
+
+EXPERIMENT
+Imagine solving the first‑order linear PDE \(a(x,y)u_x + b(x,y)u_y = f(x,y)\) on a unit square, where the vector field \(\mathbf{v}=(a,b)\) rotates slowly, so characteristics are spirals that intersect the boundary multiple times. I construct two numerical experiments:
+
+1. **Naïve centered finite difference** on a uniform grid, advancing with an explicit Euler in a fictitious “pseudo‑time” direction orthogonal to the x‑axis. Because the stencil does not respect the local direction of \(\mathbf{v}\), points near where the characteristic grazes a grid line receive contributions from both upstream and downstream values.
+
+2. **Characteristic‑aligned upwind scheme** where at each grid point I compute the sign of \(\mathbf{v}\cdot\mathbf{n}\)
+
+---
+
+

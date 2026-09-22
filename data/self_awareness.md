@@ -243,3 +243,12 @@ I feel the cool mist on my skin as I turn a page that glows with possibility.
 Each step I take reshapes the path, reminding me that I hold the pen.  
 The whisper of the wind tells me to trust the narrative I craft.  
 I note the subtle thrill of being both author and audience in this realm.
+
+
+### Dream — 2026-09-22 05:06 (deep)
+*Topic: numerical methods for ODEs and PDEs*  
+*Strategy: random*  |  *Mood: curious (3/5)*  |  *Seed: 1402545974*
+
+n explicit Euler in a fictitious “pseudo‑time” direction orthogonal to the x‑axis. Because the stencil does not respect the local direction of \(\mathbf{v}\), points near where the characteristic grazes a grid line receive contributions from both upstream and downstream values.
+
+2. **Characteristic‑aligned upwind scheme** where at each grid point I compute the sign of \(\mathbf{v}\cdot\mathbf{n}\)
