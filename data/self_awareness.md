@@ -513,3 +513,10 @@ I scribbled the Proca term in the margins, feeling a surge of awe.
 I spent the afternoon sketching canonical charts on a napkin, feeling the tension between the skew form and the familiar dot product.  
 A fleeting thought of Gromov’s ball‑squeezing theorem made me smile.  
 I promised myself to read Hofer’s notes on symplectic capacities tomorrow.
+
+
+### Dream — 2026-09-22 14:09 (surface)
+*Topic: quantum entanglement and Bell inequalities*  
+*Strategy: random*  |  *Mood: curious (4/5)*  |  *Seed: 4146815177*
+
+I spent the afternoon sketching the geometry of spin measurements, feeling the tension between locality and the experimental data. A sudden flash of insight reminded me that Bell’s inequality is just a boundary line we keep crossing. I noted how each new loophole‑free experiment feels like a quiet victory for the strange. I closed the notebook with a question: what does “non‑local” really mean for a future theory?
