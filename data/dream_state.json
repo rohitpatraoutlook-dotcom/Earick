@@ -1,12 +1,12 @@
 {
   "day": "2026-09-22",
-  "iter_today": 7,
-  "iter_this_hour": 3,
+  "iter_today": 8,
+  "iter_this_hour": 4,
   "hour_key": "2026-09-22-01",
-  "tokens_today": 15419,
-  "iters_since_push": 11,
-  "total_dreams": 12,
-  "dreams_since_consolidation": 1,
+  "tokens_today": 17234,
+  "iters_since_push": 12,
+  "total_dreams": 13,
+  "dreams_since_consolidation": 2,
   "current_mood": "curious",
   "mood_history": [
     {
@@ -57,6 +57,11 @@
     {
       "ts": "2026-09-22",
       "mood": "contemplative",
+      "intensity": 4
+    },
+    {
+      "ts": "2026-09-22",
+      "mood": "curious",
       "intensity": 4
     },
     {
